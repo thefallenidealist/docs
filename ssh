@@ -1,0 +1,80 @@
+# Created 190311
+#  vim: set ft=conf ts=4 sw=4 tw=0 fdm=marker noet :
+# 190504 tutorial
+
+# ssh keys																	{{{
+# -----------------------------------------------------------------------------
+# ------------------------------------------------------------------------- }}}
+# X11 forwarding															{{{
+# -----------------------------------------------------------------------------
+client - machine which will run ssh user@server
+server - machine which is running sshd
+
+# -----------------------------------------------------------------------------
+# server configuration
+# -----------------------------------------------------------------------------
+# Enable X11 forwarding
+# /etc/ssh/sshd_config:
+AllowTcpForwarding yes
+X11Forwarding yes
+X11UseLocalhost no
+
+# install xauth program:
+pkg install xauth
+
+# restart sshd
+service sshd restart
+
+# -----------------------------------------------------------------------------
+# client configuration
+# -----------------------------------------------------------------------------
+# To forward X11 data, pass -X flag to ssh
+ssh -X user@jail1
+ssh -X user@jail1 xterm
+
+# enable X11 forwarding by default:
+~/.ssh/config
+# in global (or per-host if segregation is needed) section add:
+ForwardX11 yes
+
+# -----------------------------------------------------------------------------
+# errors
+# -----------------------------------------------------------------------------
+# tested with:
+ssh -X user@jail1 xterm
+
+# errors when xauth is not installed nor X11 forwarding is enabled:
+# xauth: 0 X11 forwarding: 0
+X11 forwarding request failed on channel 0
+xterm: Xt error: Can't open display:
+xterm: DISPLAY is not set
+
+# errors when xauth is installed but X11 forwarding is disabled:
+# xauth: 1 X11 forwarding: 0
+X11 connection rejected because of wrong authentication.
+xterm: Xt error: Can't open display: localhost:10.0
+
+# errors when xauth is not installed but X11 forwarding is enabled:
+# xauth: 0 X11 forwarding: 1
+ X11 forwarding request failed on channel 0
+xterm: Xt error: Can't open display:
+xterm: DISPLAY is not set
+
+# errors when hosts file is not set:
+/usr/local/bin/xauth:  file /home/user/.Xauthority does not exist
+/usr/local/bin/xauth: (stdin):1:  bad display name "jail1:10.0" in "remove" command
+/usr/local/bin/xauth: (stdin):2:  bad display name "jail1:10.0" in "add" command
+xterm: Xt error: Can't open display: jail1:10.0
+
+# error when forwarding works (with xeyes), but not with xterm
+/usr/local/bin/xauth:  file /home/user/.Xauthority does not exist
+xterm: cannot match normal font "Literation Mono Powerline:pixelsize=15"
+xterm: Selected font has no non-zero height for ISO-8859-1 encoding
+# font specified in client's .Xdefaults is missing on server:
+pkg install -y xorg-fonts-truetype
+
+# tested on FreeBSD 12.0 client/host with FreeBSD 12.0 jails and Linux VM under byhve
+# ------------------------------------------------------------------------- }}}
+
+# warnings:
+- don't use xhost+, we are in modern unsafe world
