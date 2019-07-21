@@ -1,0 +1,153 @@
+# 190721
+Xiaomi A2 lite
+Daisy
+#  vim: set ft=conf ts=4 sw=4 tw=0 fdm=marker noet :
+pkg install android-tools-{adb,fastboot}
+
+# stock ROM user setup														{{{
+# -----------------------------------------------------------------------------
+- disable Google Photos sync "cloud backup"
+- login to WLAN
+- set date
+- don't login to google services
+  - playstore won't work but it will update existing apps
+# ------------------------------------------------------------------------- }}}
+#
+# enable developers options & USB debugging									{{{
+# -----------------------------------------------------------------------------
+- Settings -> About phone -> tap "Build number" (last item) 7x
+- Settings -> System -> Advanced -> Developer options -> Debugging -> check "USB debugging"
+
+- disconnect and reconnect USB cable and check "Allow USB debugging"
+# ------------------------------------------------------------------------- }}}
+# unlock bootloader															{{{
+# -----------------------------------------------------------------------------
+
+# failed attempts															{{{
+# -----------------------------------------------------------------------------
+# INFO 190721 no need to install chinese shitty application, nor to buy new SIM cards (to use chinese shitty applications) - this is not MIUI device
+- create Xiaomi account
+https://global.account.xiaomi.com/pass/register
+- disposable mail won't work, tested with multiple providers
+- register account
+- login into account
+- copy used ID "nickname" (longer number shown in upper right corner after login)
+
+http://en.miui.com/unlock/
+- click Unlock Now
+- everything is in chinese, logically
+- it will ask for "nickname" (user ID from registration page)
+- reopen link above again
+- download miflash - Windows application :(
+
+Your Mi Account ID: 6223125175
+Email account: scratch gmail.
+
+- extract application from zip
+- MiUsbDriver.exe
+- miflash_unlock.exe
+- login to account
+- disconnect USB and power off phone
+- press volume DOWN & power (boot to bootloader)
+- connect to USB
+# ------------------------------------------------------------------------- }}}
+# now unlock bootloader:
+doas fastboot oem unlock
+OKAY [  0.028s]
+Finished. Total time: 0.038s
+	# if it says that bootloader cannot be unlocked:
+	FAILED (remote: oem unlock is not allowed)
+	fastboot reboot
+	Settings -> System -> Advanced -> Developer options -> check "OEM unlocking"
+# ------------------------------------------------------------------------- }}}
+# reboot to fastboot/recovery												{{{
+# -----------------------------------------------------------------------------
+Hardware way: poweroff phone
+- volume down & power -> fastboot
+- volume up   & power -> recovery (TWRP if installed)
+
+PC:
+adb reboot recovery
+adb reboot fastboot
+fastboot reboot recovery
+fastboot reboot fastboot
+
+# moje nesto:
+fastboot devices
+0918d4fd0805    fastboot
+# ------------------------------------------------------------------------- }}}
+# TWRP																		{{{
+# -----------------------------------------------------------------------------
+# https://forum.xda-developers.com/mi-a2-lite/development/official-twrp-daisy-t3855396
+# 1. Enable developer options (your bootloader should still be unlocked)
+# 2. adb reboot bootloader
+adb reboot bootloader
+  => fastboot mode
+# 3. fastboot boot twrp-daisy-3.2.3-0.img
+doas fastboot boot twrp-3.2.3-0-daisy.img
+=> will boot TWRP
+
+# 4. Hit "Cancel" if you're prompted for a decrypt password
+# 5. adb push ./twrp-installer-daisy-3.2.3-0.zip /sdcard
+doas adb push ./twrp-installer-daisy-3.2.3-0.zip /sdcard
+- wipe all
+6. Run the install in TWRP to permanently install TWRP across both slots
+7. Reboot (you can reboot afterwards to TWRP to verify it is there)
+doas reboot recovery
+
+# https://www.thecustomdroid.com/install-twrp-recovery-root-xiaomi-mi-a2-a2-lite/
+Disable encryption in TWRP:
+- Wipe -> Format data -> "yes"
+- push file
+doas adb push Disable-Force-Encryption-Treble.zip /sdcard
+- install it with TWRP Install
+
+# fix "System has been deleted":
+doas fastboot flash aboot_a aboot_9.6.4.img
+doas fastboot flash aboot_b aboot_9.6.4.img
+# According to the explanation given by XDA Senior Member mac12m99, the newer
+# bootloader (aboot.img) version checks for stock recovery, even when the
+# bootloader is unlocked. To overcome this, you can flash an older bootloader
+# version (Especifically from V9.6.4.0) to fix this issue.
+
+test if it is permament:
+doas adb reboot recovery
+- power off
+- volume down & power
+# ------------------------------------------------------------------------- }}}
+
+# GSI 																		{{{
+# -----------------------------------------------------------------------------
+https://forum.xda-developers.com/mi-a2-lite/development/gsi-aosp-phh-treble-v109-t3893298
+
+clean flash 9.6.11.0 stock rom
+# download it from:
+https://xiaomifirmware.com/roms/download-official-roms-for-xiaomi-mi-a2-lite/
+
+
+https://github.com/phhusson/treble_experimentations/releases
+v112 # article says v110 should be used
+- Assets
+system-arm64-ab (floss, su)
+# ------------------------------------------------------------------------- }}}
+
+fastboot flash mdtp_a mdtp.img
+# That file is in the images folder after you extract the fastboot ROM.
+doas fastboot flash mdtp_a daisy_global_images_V10.0.7.0.PDLMIXM_9.0/images/mdtp.img
+doas fastboot flash mdtp_b daisy_global_images_V10.0.7.0.PDLMIXM_9.0/images/mdtp.img
+
+# flash stock																{{{
+# -----------------------------------------------------------------------------
+# stock ROM download
+https://xiaomifirmware.com/roms/download-official-roms-for-xiaomi-mi-a2-lite/
+- works, Android 8.1.0
+- will overwrite TWRP
+
+- extract it
+- run script (patch /fastboot/doas fastboot)
+./flash_all_except_storage.sh
+# ------------------------------------------------------------------------- }}}
+
+#																			{{{
+# -----------------------------------------------------------------------------
+# ------------------------------------------------------------------------- }}}

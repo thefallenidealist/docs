@@ -1,0 +1,32 @@
+# 190510
+Problem: Global array of structs has always values of 0s
+
+Found:
+- data segment not copied properly to RAM
+  - don't copy RAM to RAM
+  - copy data from FLASH to RAM (meant to be copied to RAM)
+  - usually linker script has "sidata" section which represents that
+  - sidata (in flash) is placed after .text
+  - has the same address as end of .text:
+    - &__section_idata_start == &__section_text_end
+
+- bug when setting BSS segment to 0
+ - was set to start copy from &__section_data_start
+
+# linker script:
+- .data
++ .data : AT ( __section_idata_start )
+
+# startup code:
+src = &__section_idata_start;
+dst = &__section_data_start;
+while (dst < &__section_data_end)
+{
+	*(dst++) = *(src++);
+}
+
+dst = &__section_bss_start;
+while (dst < &__section_bss_end)
+{
+	*(dst++) = 0;
+}
