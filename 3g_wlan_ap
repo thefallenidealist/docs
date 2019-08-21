@@ -1,0 +1,140 @@
+# 151017
+# 160613
+# 180830
+#  vim: set ft=conf ts=4 sw=4 tw=0 fdm=marker noet :
+Steps to perform connecting to 3G network and sharing it over WLAN AP
+
+# 2015:
+/boot/loader.conf
+u3g_load=YES
+# 2019:
+- no need to specify anything in loader.conf or rc.conf
+
+# -----------------------------------------------------------------------------
+# 3G local setup
+# -----------------------------------------------------------------------------
+# add to /etc/ppp/ppp.conf:													{{{
+# -----------------------------------------------------------------------------
+vip:
+ set log Phase Chat LCP IPCP CCP tun command
+ ident user-ppp VERSION
+ set device /dev/cuaU0
+ set timeout 180
+ set speed 921600
+ set dial "ABORT BUSY TIMEOUT 3 \
+        \"\" \
+        AT OK-AT-OK \
+        AT+CFUN=1 OK-AT-OK \
+        AT+CMEE=2 OK-AT-OK \
+        AT+CSQ OK \
+        AT+CGDCONT=1,\\\"IP\\\",\\\"data.vip.hr\\\" OK \
+        ATD*99# CONNECT"
+
+ set timeout 180
+ enable dns
+ resolv writable
+ set ifaddr 10.0.0.1/0 10.0.0.2/0 255.255.255.0 0.0.0.0
+ add default HISADDR
+# ------------------------------------------------------------------------- }}}
+APNs:
+    bonbon: web.htgprs
+    Vip:    data.vip.hr  # pretplata bez ugovorne obaveze
+Start ppp:
+ppp -ddial vip
+# 2019 vip & tele2 ppp.conf													{{{
+# -----------------------------------------------------------------------------
+# 2018.09.
+# vip: AT+CGDCONT=1,\\\"IP\\\",\\\"data.vip.hr\\\" OK \
+tele2:
+ set log Phase Chat LCP IPCP CCP tun command
+ ident user-ppp VERSION
+ set device /dev/cuaU0
+ set timeout 180
+ set speed 921600
+ set dial "ABORT BUSY TIMEOUT 3 \
+		\"\" \
+		AT OK-AT-OK \
+		AT+CFUN=1 OK-AT-OK \
+		AT+CMEE=2 OK-AT-OK \
+		AT+CSQ OK \
+		AT+CGDCONT=1,\\\"IP\\\",\\\"internet.tele2.hr\\\" OK \
+		ATD*99# CONNECT"
+
+ set timeout 180
+ enable dns
+ resolv writable
+ set ifaddr 10.0.0.1/0 10.0.0.2/0 255.255.255.0 0.0.0.0
+ add default HISADDR
+# ------------------------------------------------------------------------- }}}
+
+# check that WLAN card supports host mode (iwn doesn't support it):
+ifconfig wlan1 list caps | grep -i hostap
+
+# -----------------------------------------------------------------------------
+# WLAN AP 1st step: Enable WLAN AP (hostapd)
+# -----------------------------------------------------------------------------
+# add to rc.conf:
+hostapd_enable="YES"
+wlans_urtwn0="wlan1"
+create_args_wlan1="wlanmode hostap"
+ifconfig_wlan1="inet 192.168.11.1 netmask 255.255.255.0"
+# edit /etc/hostapd.conf
+interface=wlan1
+debug=1
+ctrl_interface=/var/run/hostapd
+ctrl_interface_group=wheel
+ssid=WLAN_AP_NAME
+wpa=1
+wpa_passphrase=PASSWORD
+wpa_key_mgmt=WPA-PSK
+wpa_pairwise=CCMP TKIP
+# start hostapd:
+service start hostapd
+# or start it in debug mode:
+hostapd -d /etc/hostapd.conf
+# Now clients can join our WLAN.
+
+# -----------------------------------------------------------------------------
+# WLAN AP 2nd step: Enable dhcpd:
+# -----------------------------------------------------------------------------
+# install FreeBSD port of OpenBSD dhcpd:
+pkg install dhcpd
+# configure it: /usr/local/etc/dhcpd.conf
+# DHCP server for wlan1 (IP: 192.168.11.1)
+subnet 192.168.11.0 netmask 255.255.255.0
+{
+	option domain-name-servers 1.1.1.1;
+	option routers 192.168.11.1;
+	range 192.168.11.10 192.168.11.50;
+}
+# enable it: /etc/rc.conf:
+dhcpd_enable="YES"
+# run it:
+service dhcpd enable
+# or start it in debug mode:
+dhcpd -d
+# Now clients can get dynamic IP (staring from .11.10)
+
+# -----------------------------------------------------------------------------
+# WLAN AP 3rd step: forward traffic from WLAN to internet interface
+# -----------------------------------------------------------------------------
+# add to rc.conf:
+gateway_enable="YES"	# net.inet.ip.forwarding=1 ; service routing restart
+pf_enable="YES"
+pflog_enable="YES"
+# edit /etc/pf.conf and add:
+ext_if = "tun0"  # connected to internet - use tun0, not ue0
+int_if = "wlan1"
+localnet = $int_if:network
+nat on $ext_if from $localnet to any -> ($ext_if)
+pass  in on $int_if from $localnet to any keep state
+pass out on $int_if from $localnet to any keep state
+# start pf NAT:
+service pf start
+
+# -----------------------------------------------------------------------------
+# test it
+# -----------------------------------------------------------------------------
+- try to ping host IP (eg 192.168.11.1) - if doesn't work, probably error in dhcpd
+- try to ping external IP address: 1.1.1.1 - if doesn't work, probably error in pf routing
+- try to ping external site: www.opendns.org - if doesn't work, (but pinging external IP works): probably error in DNS server - try to edit dhcpd.conf
