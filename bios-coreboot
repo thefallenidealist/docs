@@ -1,157 +1,30 @@
 # 180519
-#  vim: set ft=conf ts=4 sw=4 tw=0 fdm=marker et :
-gmake distclean # if MBO are switched
-gmake nconfig
-# or
-gmake menuconfig
+# 190824 ThinkPad only
+#  vim: set ft=conf ts=4 sw=4 tw=0 fdm=marker noet :
 
-# 180916
-# https://www.coreboot.org/Board:lenovo/t530
-T530 has 2 flash chips of 8M and 4M. They're concatenated to one virtual flash chip of 12M which is itself subdivided in roughly in 4 parts:
-    Descriptor (12K)
-    ME firmware (5M-12K)
-    GbE firmware
-    System flash (7M)
-
-1.) Read out the flash to make a backup Twice, compare to ensure they match and then save a copy of it on external media:
-flashrom -p <yourprogrammer> -r flash.bin
-flashrom -p <yourprogrammer> -r flash2.bin
-diff flash.bin flash2.bin
-
-2.) Since you have to write only top 4M out of the 12M coreboot.rom, first split out those 4M by:
- dd of=top.rom bs=1M if=build/coreboot.rom skip=8
-Then use flashrom to flash top.rom.
-
-# https://www.coreboot.org/Intel_Sandybridge_Build_Tutorial
-
-# QEMU boot:                                                                {{{
-# -----------------------------------------------------------------------------
-# https://www.coreboot.org/Lesson1
-pkg install gcc6-aux
-export PATH=/usr/local/gcc6-aux/bin:$PATH
-gmake crossgcc-i386 CPUS=$(sysctl -n hw.ncpu)
-# build the payload - coreinfo
-gmake -C payloads/coreinfo olddefconfig
-gmake -C payloads/coreinfo
-
-# => INFO payload is in:
-# payloads/coreinfo/build/coreinfo.elf
-
-# EMULATION - Step 5 - Configure the mainboard
-gmake nconfig # make menuconfig
-   select 'Mainboard' menu
-   Beside 'Mainboard vendor' should be '(Emulation)'
-   Beside 'Mainboard model' should be 'QEMU x86 i440fx/piix4'
-   select exit
-   select 'Payload' menu
-   select 'Add a Payload'
-   choose 'An Elf executable payload'
-   select 'Payload path and filename'
-   enter 'payloads/coreinfo/build/coreinfo.elf'
-   select exit
-   select exit
-   select yes
-
-gmake
-# => build/coreboot.rom
-# qemu-system-i386 -bios build/coreboot.rom -serial stdio
-# qemu-system-i386 -bios build/coreboot.rom -nographic # to exit: Ctrl-A x
-qemu-system-x86_64 -bios build/coreboot.rom -serial stdio -hda /mnt/vm/FreeBSD_qemu/hdd.img
-# ------------------------------------------------------------------------- }}}
-# 181016 custom image/picture                                               {{{
-# -----------------------------------------------------------------------------
-# build CoreBoot & SeaBIOS (just default .config for CoreBoot and run gmake)
-Don't forget to add "Press F12 for boot menu" onto picture
-Save picture as jpg and with resolution 640x480 (or 1024x768)
-- build coreboot first (gmake)
-- add picture to BIOS image
-./build/cbfstool build/coreboot.rom add -f /tmp/boot1.jpg -n bootsplash.jpg -t raw
-# check it:
-./build/cbfstool build/coreboot.rom print
-...
-bootsplash.jpg                 0x21380    raw             17598 none
-# ------------------------------------------------------------------------- }}}
-# 181016 building SeaBIOS                                                   {{{
-# -----------------------------------------------------------------------------
-cd payloads/external/SeaBIOS/seabios
-gmake nconfig # not needed, default config was used
-export PATH=/usr/local/gcc6-aux/bin:$PATH
-# CC is not FreeBSD's cc, but gcc from gcc6-aux package:
-# XXX error: ld: unrecognised emulation mode: elf_i386
-# LD=/usr/local/bin/ld won't work, patch the Makefile:
-payloads/external/SeaBIOS/seabios/Makefile
-# -LD=$(CROSS_PREFIX)ld
-# +LD=/usr/local/bin/ld
-# ...
-# -PYTHON=python
-# +PYTHON=python2.7
-# build it:
-CC=gcc gmake -C payloads/external/SeaBIOS/seabios
-# => payloads/external/SeaBIOS/seabios/out/bios.bin.elf
-
-# Build core boot with seabios as payload
-gmake nconfig
-# Configure coreboot with the following all disabled: CONFIG_VGA_ROM_RUN, CONFIG_PCI_ROM_RUN, CONFIG_ON_DEVICE_ROM_RUN 
-Payload -> Add a payload -> _____________ Payload path and filename
-# ------------------------------------------------------------------------- }}}
-
-
-For Intel boards you have to provide files coreboot can't generate by itself:
-    Intel Flash Descriptor region
-    Intel Gigabit Ethernet firmware
-    Intel Management Engine
-# Please have a look at Binary situation for a full overview. The files have to be extracted from your vendor bios.
-Enter the Chipset menu
-    Do the following based on which blobs you have:
-    Untick Build with a fake IFD (descriptor.bin)
-    Tick Add gigabit ethernet firmware (gbe.bin)
-    Tick Add Intel Management Engine firmware (me.bin)
-
-
-# misc
-FreeBSD should work out of the box with SeaBIOS
-FreeBSD can be booted via coreboot using SeaBIOS or GRUB2.
-
-# after flashing, check this TODO 180917
-nvramtool -a
-
-
-
-# 181113 ThinkPad T430s                                                     {{{
+# first build																{{{
 # -----------------------------------------------------------------------------
 # 190811 rechecked
+apt-get install git build-essential gnat flex bison libncurses5-dev wget zlib1g-dev
+	# pkg install gcc6-aux bison
+	# export PATH=/usr/local/gcc6-aux/bin:$PATH
+git clone https://review.coreboot.org/coreboot
+cd coreboot
+git checkout 4.9
+git submodule update --init --checkout
+
 # GNAT gcc (with ada support)
-pkg install gcc6-aux bison
-export PATH=/usr/local/gcc6-aux/bin:$PATH
 gmake crossgcc-i386 CPUS=$(sysctl -n hw.ncpu)
+		# XXX 190811: this will fail on Linux jail (single or multicore build)
+		# it will work in Linux VM
 # result:
 >> You can now run IASL ACPI compiler from /mnt/hdd/src/coreboot/util/crossgcc/xgcc.
 # gmake iasl    # already run in previous make command
 
 gmake -C util/ifdtool
-
-# fetch binary blobs:
-git submodule update --init --checkout
-
-# FreeBSD test                                                              {{{
-# - build non-functional (without Intel ME and other binary blobs)
-# - to compare it with Linux built coreboot.rom
-# -----------------------------------------------------------------------------
-# Required ports/packages are gmake, flex, bison, vim (for xxd), and I'm sure I forgot one or two.
-gmake distclean
-# - patch
-payloads/external/SeaBIOS/seabios/Makefile
-    -PYTHON=python
-    +PYTHON=python2.7
-cp linux_build/config1_withoutME .config
-# patch
-payloads/libpayload/Makefile
-
-gmake
-
 # ------------------------------------------------------------------------- }}}
-# https://nm-projects.de/2017/08/flashing-coreboot-on-the-t430-with-a-raspberry-pi/
-# programmer STM32                                                          {{{
+
+# programmer STM32															{{{
 # -----------------------------------------------------------------------------
 # used STM32 board with patched stm32-vserprog (used for FPGA flashing)
 SPI1_NSS     PA4
@@ -159,7 +32,7 @@ SPI1_SCK     PA5
 SPI1_MISO    PA6
 SPI1_MOSI    PA7
 # ------------------------------------------------------------------------- }}}
-# read original BIOS:                                                       {{{
+# read original BIOS:														{{{
 # -----------------------------------------------------------------------------
 # pinout:
 # used programer: STM32F103C8T6 board with stm32-vserprog firmware
@@ -171,14 +44,14 @@ prog:        |   MX25/W25 |     prog:
         -   3 WP        6 CLK   PA5 (SCK)
         GND 4 GND       5  SI   PA7 (MOSI)
 # command used to read original BIOS (on FreeBSD hosts):
-flashrom -p serprog:dev=/dev/cuaU3:4000000 -c "MX25L12835F/MX25L12845E/MX25L12865E" -r bios1.bin
+flashrom -p serprog:dev=/dev/cuaU3:4000000 -r bios1.bin
 
 # compare it:
 sha256 bios*
 diff bios1.bin bios2.bin
 strings bios1.bin | less
 # ------------------------------------------------------------------------- }}}
-# write original BIOS to replacement IC                                     {{{
+# write original BIOS to replacement IC										{{{
 # -----------------------------------------------------------------------------
 # prog:     pin on W25
 PA4         1
@@ -192,8 +65,6 @@ IO3 NC          CLK PA5
 DO  PA6 MISO    CS  PA4
 WP  NC          GND
 
-~/src/flashrom/flashrom -p serprog:dev=/dev/cuaU3:921600 -c "W25Q128.V" -r empty.bin    # from GitHub master
-flashrom -p serprog:dev=/dev/cuaU3:921600 -c "W25Q128.V" -r empty.bin                   # from pkg
 # write original BIOS to new & empty W25Q128:
 flashrom -p serprog:dev=/dev/cuaU3:921600 -w bios1.bin
 # read it, just in case:
@@ -203,147 +74,51 @@ diff biosN1.bin bios1.bin
 sha256 biosN1.bin bios1.bin
 # ------------------------------------------------------------------------- }}}
 
+# extract blobs from original BIOS											{{{
+# -----------------------------------------------------------------------------
+mkdir blobs
+cd blobs
+../util/ifdtool/ifdtool -x ../dump/ThinkPad\ T430s\ BIOS\ dump\ v2.72\ 181115.bin
+# createad files:
+flashregion_0_flashdescriptor.bin
+flashregion_1_bios.bin
+flashregion_2_intel_me.bin
+flashregion_3_gbe.bin
+
+# backup ME region before neutralizing:
+cp flashregion_2_intel_me.bin flashregion_2_intel_me-stock.bin
+# ------------------------------------------------------------------------- }}}
+# config																	{{{
+# -----------------------------------------------------------------------------
+gmake nconfig
+
+General Setup
+	Use CMOS for configuration values
+	Allow use of binary-only repository (NEW)
+Mainboard
+	Mainboard vendor (Lenovo)
+	Mainboard model (ThinkPad T430s)
+
+Chipset
+	Add Intel descriptor.bin file
+		(blobs/flashregion_0_flashdescriptor.bin)
+	Add Intel ME/TXE firmware
+		(blobs/flashregion_2_intel_me.bin)
+	Add gigabit ethernet firmware
+		(blobs/flashregion_3_gbe.bin)
+Payload
+	# already selected:
+	Add a payload (SeaBIOS)
+	SeaBIOS version (1.12.0)
+
+
+# ------------------------------------------------------------------------- }}}
+
 make
 
-# VGA BIOS 181121                                                           {{{
-# -----------------------------------------------------------------------------
-# - cilj: omogucit non-glitcy BIOS boot s FHD modom (ekrani radi kad prodje kldload i915kms)
-# https://www.coreboot.org/VGA_support#How_to_retrieve_a_good_video_bios
-
-git clone https://github.com/coreboot/bios_extract
-cd bios_extract
-gmake
-cd .. # to <coreboot folder>
-
-# ------------------------------------------------------------------------- }}}
-# ------------------------------------------------------------------------- }}}
 
 
-# patched files/projects                                                    {{{
-# -----------------------------------------------------------------------------
-libpayload
-tint
-SeaBIOS
-# ------------------------------------------------------------------------- }}}
 
-# FHD and mangled picture                                                   {{{
-# -----------------------------------------------------------------------------
-# 181121
-# - picture will be mangled when CoreBoot and FHD (with LVDS->eDP adapter) is usde
-# - stock will have non-distorted picture
-
-# solution 1:
-gmake nconfig -> Devices -> Graphics initialization (Use libgfxinit)
-Warning: "native graphics initialization" is only supported on Intel mobile GPUs using LVDS and remove the need to run the Option Rom to get graphics output.
-# -> now BIOS (nvramcui) and Unix single user boot work as expected (well, FreeBSD will boot with red letters, but it won't be mangled)
-# maybe XXX 181122: MenuetOS will not work
-
-# solution 2: extract 
-# TODO 181122: 
-# ------------------------------------------------------------------------- }}}
-
-# visak                                                                     {{{
-# -----------------------------------------------------------------------------
-# flashing the programmer                                                   {{{
-# -----------------------------------------------------------------------------
-# INFO 181120: Not used, old firmware (from 2018.04. patched for FPGA worked)
-# build programmer firmware:
-git clone https://github.com/dword1511/stm32-vserprog
-cd stm32-vserprog
-
-# Patch Makefile so it can be built on FreeBSD
-    -#OS       = $(shell uname -s)
-    -#ifeq ($(OS), Linux)
-    -#    MAKE = make
-    -#else
-    -#    MAKE = gmake
-    -#endif
-    +OS       = $(shell uname -s)
-    +ifeq ($(OS), Linux)
-    +    MAKE = make
-    +else
-    +    MAKE = gmake
-    +endif
-    ...
-    -       @ln -sfT "boards/$(BOARD).h" board.h
-    +       @ln -sf "boards/$(BOARD).h" board.h
-
-# flash it
-# ------------------------------------------------------------------------- }}}
-# TODO 181118: flashing isprobat
-- jako kratke zice: ako ne radi, jebiga, to je to
-- duze zice, Vcc ne spajat nego ustekat napajanje od laptopa, a sve ostalo od programatora - vjerojatno zajeb jer ce se ME bootat
-# Orange Pi Zero with Armbian as programer                                  {{{
-# -----------------------------------------------------------------------------
-# 181118 Quote from 'net:
-# According to my experience, those dedicated external programmers are feasible
-# to program solitary SPI flash chips, but not feasible for in-system
-# programming, because their electrical current to program chips may be too
-# small, as other components on circuit may disperse the current, and dispersed
-# current is not enough to program, even detect the chip.
-# TODO 181118: 
-flashrom -p linux_spi:dev=/dev/spidev0.0 -c MX25L1605 -w spi.img
-# ------------------------------------------------------------------------- }}}
-
-
-$ dd if=/dev/zero count=2048 bs=1K | tr '\000' '\377' > spi.img
-$ dd if=/usr/lib/linux-u-boot-orangepizero_5.31_armhf/u-boot-sunxi-with-spl.bin of=spi.img bs=1k conv=notrunc
-# ------------------------------------------------------------------------- }}}
-
-
-./build/cbfstool build/coreboot.rom add -f /tmp/boot1.jpg -n bootsplash.jpg -t raw
-
-# options 181122                                                            {{{
-# -----------------------------------------------------------------------------
-# "BIOS config" - touchpad on/off& similar
-+CONFIG_USE_OPTION_TABLE=y
-+# CONFIG_STATIC_OPTION_TABLE is not set
-# on booted PC use "nvramtool -a" to see options
-# - use nvramcui as payload to have possibility to change BIOS options at boot
-
-# useless options:
-CONFIG_TIMESTAMPS_ON_CONSOLE
-# ------------------------------------------------------------------------- }}}
-#
+# 										{{{
 # -----------------------------------------------------------------------------
 # ------------------------------------------------------------------------- }}}
-# TODO 181118: GRUB as payload                                              {{{
-# -----------------------------------------------------------------------------
-# try to boot FreeBSD
-
-# example booting from USB install stick:
-# https://libreboot.org/docs/bsd/freebsd.html
-Installing FreeBSD without full disk encryption
-
-Press C in GRUB to access the command line:
-
-grub> kfreebsd (usb0,gpt3)/boot/kernel/kernel
-grub> set FreeBSD.vfs.mountfrom=ufs:/dev/da1p3\
-grub> boot
-# ------------------------------------------------------------------------- }}}
-
-# TODO 181120: flash logs                                                   {{{
-# -----------------------------------------------------------------------------
-Enable the CONSOLE_SPI_FLASH configuration option and the console log will be written to the flash. When you use your external programmer, just dump the flash first, then you can use ‘cbfstool rom.bin read -r CONSOLE -f console.log‘ to extract the console log from it. No wires, no mess, no soldering required. Well, you do still need the external flasher, but you already have to use it to unbrick the machine since it wasn’t booting (and if it was booting, then you already have log access through cbmem, so you don’t need uart or flash console).
-# ------------------------------------------------------------------------- }}}
-# TODO 181121: https://www.coreboot.org/Intel_Native_Raminit
-
-# XXX 181122: bugs                                                          {{{
-# -----------------------------------------------------------------------------
-nvramcui
-- backlight: "Keyboard only" -> ThinkLight will be always ON
-- backlight: If not "Both" ThinkLight will be always ON
-# ------------------------------------------------------------------------- }}}
-
-# MenuetOS
-# -----------------------------------------------------------------------------
-- download and extract .img
-- change CBFS size to 0x200000
-./build/cbfstool build/coreboot.rom add -f MenuetOS_64_12900.img -c lzma -n floppyimg/MyFloppy.lzma -t raw
-# ------------------------------------------------------------------------- }}}
-It is recommended to also dump the video bios table (VBT) to a file to include in cbfs, as the VBT table is expected by Windows
-
-# add payload:
-./build/cbfstool build/coreboot.rom add-payload -f tint/tint.elf -n img/tint2_linux
-
-muh freedom. :D
