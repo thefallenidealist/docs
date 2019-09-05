@@ -1,0 +1,21 @@
+# 161009
+# INFO watch for the fucking disk names!
+# destroy fist MB of the disk:
+dd if=/dev/zero of=/dev/da0 bs=1M count=1
+# destroy last sector(?) of the disk:
+dd if=/dev/zero of=/dev/da0 bs=1m oseek=`diskinfo da0 | awk '{print int($3 / (1024*1024)) - 4;}'`
+
+# 171021
+# remove boot flag (don't ask for GELI password when booting):
+geli configure -B ada1p1.eli
+# before:
+geli list ada1p1.eli
+Flags: BOOT
+# after:
+Flags: NONE
+
+# 171021
+# disable power down of HDD (disable APM)
+ataidle -P 0 /dev/ada1
+# or:
+camcontrol cmd ada1 -a "EF 85 00 00 00 00 00 00 00 00 00 00"
