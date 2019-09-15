@@ -1,0 +1,37 @@
+# 181225
+# again
+https://vermaden.wordpress.com/2018/10/11/freebsd-desktop-part-17-automount-removable-media/
+
+pkg install automount \
+sysutils/fusefs-ntfs \
+sysutils/fusefs-ext4fuse \
+sysutils/fusefs-simple-mtpfs \
+x11/zenity
+
+portmaster sysutils/exfat-utils sysutils/fusefs-exfat
+
+# files:
+/var/log/automount.log
+/var/run/automount.state
+
+# patch it																	{{{
+# -----------------------------------------------------------------------------
+# 190113 it won't mount exfat USB (but it won't report any errors):
+# error when run manually:
+/usr/local/sbin/automount da0s1 attach
+mount_msdosfs: /dev/da0s1: mount option <large> is unknown: Invalid argument
+
+# patch file:
+/usr/local/sbin/automount
+# line: 435
+-FATCMD=$( mount_msdosfs ${OPTS} -o large -o longnames -m 644 -M 755 -D ${CODEPAGE} -L ${ENCODING} ${USEROPTS} ${DEV} ${MNT} )
++FATCMD=$( mount_msdosfs ${OPTS} -o longnames -m 644 -M 755 -D ${CODEPAGE} -L ${ENCODING} ${USEROPTS} ${DEV} ${MNT} )
+
+# line: 231 (not strictly needed, but for easier log reading)
+__log() { # @=MESSAGE
+   echo "automount: "$( date +"${DATEFMT}" ) "${@}" >> ${LOG}
+}
+# ------------------------------------------------------------------------- }}}
+
+
+cp /usr/local/etc/automount.conf.sample /usr/local/etc/automount.conf
