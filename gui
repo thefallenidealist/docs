@@ -1,0 +1,49 @@
+#  vim: set ft=conf ts=4 sw=4 tw=0 fdm=marker noet :
+# Set default programs														{{{
+# -----------------------------------------------------------------------------
+# 190112
+https://www.romanzolotarev.com/xdg-mime.html
+
+# Check the mimetype with xdg-mime(1):
+% xdg-mime query filetype example.pdf
+application/pdf
+
+# Check the default application for application/pdf
+% xdg-mime query default application/pdf
+xpdf.desktop
+
+# create custom .desktop files are in:
+~/.local/share/applications
+
+# mupdf.desktop:
+[Desktop Entry]
+Encoding=UTF-8
+Version=1.0
+Type=Application
+NoDisplay=true
+Exec=mupdf %f %f
+Name=mupdf
+Comment=Lightweight PDF reader
+
+# difference between exec %f and %u
+https://specifications.freedesktop.org/desktop-entry-spec/latest/ar01s06.html
+https://specifications.freedesktop.org/desktop-entry-spec/latest/ar01s07.html
+%f - single file
+%u - URL or multiple files
+
+# Set the new default application:
+% xdg-mime default mupdf.desktop application/pdf
+# ------------------------------------------------------------------------- }}}
+# DPI																		{{{
+# -----------------------------------------------------------------------------
+# ------------------------------------------------------------------------- }}}
+
+
+# -----------------------------------------------------------------------------
+# ------------------------------------------------------------------------- }}}
+
+
+# GTK dark theme															{{{
+# -----------------------------------------------------------------------------
+# 190526
+# ------------------------------------------------------------------------- }}}
