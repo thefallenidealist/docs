@@ -1,0 +1,122 @@
+# Created 190724
+
+# Lineage user setup														{{{
+# -----------------------------------------------------------------------------
+- wallpaper change
+- add settings to main screen
+
+Settings:
+Connected devices -> USB: File transfer
+System -> Advanced -> Date & time:
+  [ ] Automatic 24-hour format
+  [x] Use 24-hour format
+
+- disable adaptive brigthness
+- enable developer mode
+- enable USB debugging
+
+Developer options ->
+  [x] Advanced restart
+
+# battery percentage and clock on right side:
+System -> Advanced -> Status bar
+  # Clock position: Right
+  # - if clock is at right there will be not much space for icons (WLAN & 3G) because of notch
+  Battery status style: Text
+  Battery percentage: Next to the icon (default when style is Text)		# inside the icon is way too small
+# ------------------------------------------------------------------------- }}}
+# mobile network setup														{{{
+# -----------------------------------------------------------------------------
+# 181105 Bonbon internet
+- sending empty SMS to 13700 doesn't work (Android won't sent empty SMS)
+- sending capital "I" on 13700 doesn't work
+- CP from working cellphone:
+Settings -> Network & internet -> Mobile network -> Advanced -> Access point names
+Create new:
+APN: internet.ht.hr
+MCC: 219 (default)
+MNC: 1 (default)
+# ------------------------------------------------------------------------- }}}
+# pkgs																		{{{
+# -----------------------------------------------------------------------------
+# all from F-droid
+Etar - calendar
+QKSMS - SMS app, has dark theme
+Open contacts
+
+# netestirano
+Alarmio
+S. Notes
+SMS backup+
+
+# TODO pronac
+- binary calculator (& | >>)
+# ------------------------------------------------------------------------- }}}
+# backup strategy															{{{
+# -----------------------------------------------------------------------------
+# apps data backup
+adb shell
+su
+mkdir /data/media/0/bckp190924
+
+
+# keyboard
+- settings file:
+data/data/com.touchtype.swiftkey/shared_prefs/com.touchtype.swiftkey_preferences.xml
+- settings number row:
+<boolean name="pref_keyboard_show_number_row" value="false" />
+- settings another theme:
+
+- autocompletion history held in file:
+
+# notepad:
+- settings file:
+- notes file:
+
+# launcher
+- settings file
+- layout of icons on desktop is stored in file:
+
+# contacts (Contacts, orange icon, not OpenContacts)
+# default Android contacts:
+/data/data/com.android.providers.contacts/databases/contacts2.db
+- settings file
+- backup file
+  internal partiton
+# something
+data/data/com.android.contacts/shared_prefs/com.android.contacts.xml
+# 
+
+# QKSMS
+backup:
+internal/QKSMS/
+- settings file:
+
+# Pulsar
+settings file:
+
+
+# TWRP backups standard:
+[x] Boot (64 MB)
+[x] System (1260 MB)
+[ ] System Image
+[ ] Vendor
+[ ] Vendor Image
+[x] Data (excl. storage) (1716 MB)
+[ ] Persist
+[ ] Modem
+[ ] Firmware
+[ ] EFS
+# ------------------------------------------------------------------------- }}}
+
+# extract Hangouts sound													{{{
+# -----------------------------------------------------------------------------
+# download Hangouts apk from net:
+https://www.apkmirror.com
+# unzip it
+find . -name "*.mp3" -exec mv {} sounds \;
+find . -name "*.ogg" -exec mv {} sounds \;
+# ------------------------------------------------------------------------- }}}
+#																			{{{
+# -----------------------------------------------------------------------------
+# ------------------------------------------------------------------------- }}}
