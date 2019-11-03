@@ -1,0 +1,278 @@
+# 181215
+# 191103 XXX 191103: OpenBSD doesn't support USB cards with hostap mode
+#  vim: set ft=conf ts=4 sw=4 tw=0 fdm=marker noet :
+
+# Orange Pi Zero info														{{{
+# -----------------------------------------------------------------------------
+There are no buttons or connectors to select FEL mode so the BootROM will only
+enter FEL mode if a special SD card is present or if there are no valid boot
+options.
+
+SPI flash 2 MB
+
+A red LED, connected to the PA17 pin.
+A green LED, connected to the PL10 pin.
+
+# Cubie board
+Allwinner A20
+Dual-Core ARM Cortex-A7
+Mali400 MP2
+
+# Orange Pi Zero:
+Allwinner H3
+Quad-Core ARM Cortex-A7 @ 1.296GHz
+Mali400 MP2 @ 600Mhz
+
+Any code running on an A15 can run on a Cortex A7, just slower.
+# ------------------------------------------------------------------------- }}}
+
+# OpenBSD 6.6 Orange Pi Zero 2019											{{{
+# -----------------------------------------------------------------------------
+# 191103
+# download whole OpenBSD 6.6 armv7 release
+wget -r -nH --cut-dirs=2 --no-parent --reject="index.html*" https://cloudflare.cdn.openbsd.org/pub/OpenBSD/6.6/armv7/
+
+# download u-boot packages, INFO 191103: There are no packages for OpenBSD 6.6 armv7
+https://cdn.openbsd.org/pub/OpenBSD/6.5/packages/arm/u-boot-arm-*
+https://cdn.openbsd.org/pub/OpenBSD/6.5/packages/arm/u-boot-arm-2019.01p5.tgz
+https://cdn.openbsd.org/pub/OpenBSD/6.5/packages/arm/dtb-4.20.tgz
+tar xvf u-boot-arm*tgz
+tar xvf dtb*tgz
+
+# patch CubieBoard image for OrangePi:
+cp miniroot-cubox-66.fs miniroot-orangepi-66.fs
+
+doas mdconfig -at vnode -f miniroot-orangepi-66.fs
+doas mount -t msdosfs /dev/md0s1 /mnt/md
+# - there is no dtb for "orange pi zero". Orange Pi One is better choice (Allwinner H3) instead of Orange Pi Zero Plus (Allwinner H5).
+cp sun8i-h3-orangepi-one.dtb /mnt/md/
+cp share/dtb/arm/sun8i-h3-orangepi-one.dtb /mnt/md/
+doas umount /mnt/md
+
+doas dd if=share/u-boot/orangepi_zero/u-boot-sunxi-with-spl.bin of=/dev/md0 bs=1024 seek=8 conv=sync
+doas mdconfig -du 0
+
+doas dd if=./miniroot-orangepi-66.fs of=/dev/mmcsd0 bs=1M conv=sync
+# ------------------------------------------------------------------------- }}}
+# Boot and install															{{{
+# -----------------------------------------------------------------------------
+if=./miniroot-orangepi-66.fs of=/dev/mmcsd0 bs=1M conv=sync
+dd if=./miniroot-orangepi-66.fs of=/dev/mmcsd0 bs=1M conv=sync
+
+- connect power directly to USB (not USB hub, yellow port at least)
+- connect UART console (it will show nothing if SPI flash is desoldered and uSD not connected)
+- insert uSD
+# - insert USB WLAN card - it will stall
+- insert USB FAT32 stick with downloaded sets (name it simple like "obsd66")
+# if LAN cable is used and if board won't boot at all:
+# - disconnect LAN cable or change direction of the cable (yup, there were some fucking magic things, like always)
+
+cu -l /dev/cuaU3 -s 115200
+# don't do anything, it will boot automatically
+# find information about USB stick:
+disklabel sd1
+# mount it (don't use /mnt, it will be deleted by installer)
+mkdir /mnt2/usb
+mount -t msdos /dev/sd1i /mnt2/usb
+
+# install OpenBSD
+./install
+# if WLAN must be used:
+- dwxe0 is internal LAN, run0 is (one of) USB WLAN
+	HTTP Server? (hostname or 'done') cloudflare.cdn.openbsd.org
+	Server directory? [pub/OpenBSD/6.6/armv7]
+	Unable to connect using https. Use http instead? [no] yes
+# mine WLAN stopped working in the middle of download
+
+- don't initialize "sd1" disk when installer ask you
+
+CONGRATULATIONS! Your OpenBSD install has been successfully completed!
+# ------------------------------------------------------------------------- }}}
+# Basic setup																{{{
+# -----------------------------------------------------------------------------
+# network setup:
+# - urtwn0 needs firmware
+urtwn0: could not read firmware urtwn-rtl8188eufw
+# if box is online:
+fw_update -v
+# if box is offline, download and transfer:
+http://firmware.openbsd.org/firmware/6.6/urtwn-firmware-20180103.tgz
+tar xvzf urtwn-firmware-20180103.tgz -C /etc/
+fw_update -v # later
+# - run0 will drawn to much power when scaning to be powered directly from PC USB port
+cat /etc/hostname.run0
+nwid <ssid in ascii> wpakey <password in ascii>
+dhcp
+
+# restart network:
+sh /etc/network
+
+# -----------------------------------------------------------------------------
+# remove user (only interactive version available)
+rmuser <username>
+# add user:
+adduser
+# or (non-interactive)
+useradd -m -s /bin/sh -c "Johnny User" -G wheel -d /home/johnny johnny
+passwd johnny
+
+# add user to wheel group (needed when interactive adduser is used)
+usermod -G wheel johnny
+
+
+# enable ssh login
+# remove old identifier for host
+ssh-keygen -R orange
+# transfer public key to OrangePi:
+ssh-copy-id -i ~/.ssh/key_orangepi.pub orange
+
+# disable OpenBSD's sshd password login:
+# /etc/ssh/sshd_config		- standar vi search is CaseSensitive
+> ChallengeResponseAuthentication no
+> PasswordAuthentication no
+/etc/rc.d/sshd restart
+
+# -----------------------------------------------------------------------------
+# pkgs
+pkg_add zsh htop
+# ------------------------------------------------------------------------- }}}
+
+# PPP																		{{{
+# -----------------------------------------------------------------------------
+ifconfig ppp0 create
+
+# test AT commands:
+cu -l /dev/cuaU0
+AT+CFUN=1
+AT+CMEE=2
+AT+CSQ
+AT+CGDCONT=1,"IP","internet.tele2.hr"
+ATD*99#
+
+# convert that AT commands to chat script:
+# (ATZ is not strictly needed)
+# /etc/ppp/peers/tele2.chat
+TIMEOUT 10
+REPORT CONNECT
+ABORT BUSY
+ABORT 'NO CARRIER'
+ABORT ERROR
+SAY "Calling Tele2...\n"
+'' ATZ OK AT&F OK
+AT+CFUN=1 OK
+AT+CMEE=2 OK
+AT+CSQ OK
+AT+CGDCONT=1,"IP","internet.tele2.hr" OK
+ATD*99***1# CONNECT
+
+# INFO 191103: probably has unnecessary options
+# /etc/ppp/peers/tele2
+cuaU0
+921600
+debug
+noauth
+nocrtscts
+noipdefault
+ipcp-restart 10
+ipcp-accept-local
+ipcp-accept-remote
+0.0.0.0:10.64.64.64
+defaultroute
+novj
+connect "chat -v -f /etc/ppp/peers/tele2.chat"
+
+# test chat script:
+# /usr/sbin/chat -v -f /etc/ppp/peers/tele2.chat
+
+# set DNS:
+# already set in /etc/resolv.conf to 1.1.1.1
+
+pppd call tele2
+
+# check logs:
+tail -f /var/log/daemon
+Nov  3 16:04:38 naranca pppd[17713]: pppd 2.3.5 started by johnny, uid 0
+Nov  3 16:04:42 naranca pppd[17713]: Serial connection established.
+Nov  3 16:04:43 naranca pppd[17713]: Using interface ppp0
+Nov  3 16:04:43 naranca pppd[17713]: Connect: ppp0 <--> /dev/cuaU0
+Nov  3 16:04:46 naranca pppd[17713]: local  IP address 77.219.188.164
+Nov  3 16:04:46 naranca pppd[17713]: remote IP address 10.64.64.64
+
+ifconfig ppp0
+ppp0: flags=8051<UP,POINTOPOINT,RUNNING,MULTICAST> mtu 1500
+		index 6 priority 0 llprio 3
+		groups: ppp egress
+		inet 77.219.188.164 --> 10.64.64.64 netmask 0xff000000
+
+# just in case:
+# - disconnect WLAN card
+# - disconnect 3G card
+sh /etc/netstart
+# - connect 3G card
+pppd call tele2
+ping 1.1.1.1
+# ------------------------------------------------------------------------- }}}
+# HostAP																	{{{
+# -----------------------------------------------------------------------------
+# find supported hardware card
+man run:
+man urtwn:
+	These are the modes the run driver can operate in:
+	BSS mode
+	monitor mode
+# under FreeBSD these card supports hostap mode, but not under OpenBSD
+# list of supported cards:
+https://www.openbsd.org/faq/faq6.html#Wireless
+-> RT2500USB: but it is not available on eBay
+-> AR7010 AR9287 AR9280: available on ebay but as miniPCI card
+	AR9280 datasheet doesn't mention USB
+-> XXX 191103: Use FreeBSD with existing cards
+
+# /etc/hostname.urtwn0
+media autoselect mode 11n mediaopt hostap chan 1
+nwid gugloA wpakey password
+inet 192.168.3.1 255.255.255.0
+# and fail because it is not supported:
+sh /etc/netstart
+ifconfig: SIOCSIFMEDIA: Invalid argument
+# ------------------------------------------------------------------------- }}}
+
+# get CPU temperature                                                       {{{
+# -----------------------------------------------------------------------------
+Starting with OpenBSD 6.3 there is sxitemp:
+> The sxitemp driver provides support for the temperature sensors found on the
+> Allwinner A64, H3, H5 and R40/V40 SoCs.
+
+# It is already in kernel:
+strings /bsd | grep sxitemp
+# but:
+sysctl -a | grep -i sxi
+# shows nothing
+
+# TODO 181215: probably device tree problem
+# ------------------------------------------------------------------------- }}}
+# misc																		{{{
+# -----------------------------------------------------------------------------
+# changing kernel:
+In OpenBSD bootloader, boot "rescue"/install kernel:
+sd0a:/bsd
+fsck -y /dev/sd0a
+mount /dev/sd0a /mnt
+cd /mnt
+mv /bsd /bsd-old
+ftp ftp://ftp2.eu.openbsd.org/pub/OpenBSD/6.4/armv7/bsd
+cd /
+umount /mnt
+reboot
+
+# using dtb from FreeBSD host
+cp /usr/local/share/dtb/arm/sun8i-h2-plus-orangepi-zero.dtb /mnt/fat
+dtc -I dtb -O dts -o orange.dtc /usr/local/share/dtb/arm/sun8i-h2-plus-orangepi-zero.dtb
+# ------------------------------------------------------------------------- }}}
+
+# files to backup
+/etc/hostname*
+/etc/sysctl.conf
+/etc/dhcpd.conf
+/etc/hostapd.conf
+/etc/ppp/peers

@@ -1,0 +1,8 @@
+# 191103
+CoreBoot-ed ThinkPad doesn't generate ACPI events for dock
+acpidump -dt G -i 'dock\|dck'
+        Flags={WBINVD,C1_SUPPORTED,SLEEP_BUTTON,S4_RTC_WAKE,DOCKING_SUPPORTED,RESET_REGISTER,SEALED_CASE,PLATFORM_CLOCK}
+-> no _DCK ACPI methods
+
+It doesn't work under Linux:
+https://www.reddit.com/r/thinkpad/comments/77vazi/writing_a_dock_daemon_for_linux_need_info_about/doqci6g?utm_source=share&utm_medium=web2x
