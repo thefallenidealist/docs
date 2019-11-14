@@ -1,0 +1,16 @@
+# 191114
+# Create new GitHub repo in shell
+# https://stackoverflow.com/questions/2423777/is-it-possible-to-create-a-remote-repo-on-github-from-the-cli-without-opening-br
+curl -u 'USER@gmail.com' https://api.github.com/user/repos -d '{"name":"REPO"}'
+# git remote add origin git@github.com:USER@mail.com/REPO.git
+git remote add origin https://github.com:USER/REPO.git	# USERNAME not mail
+git push origin master
+
+
+# problem: can not push:
+git push origin my-branch
+	git@github.com: Permission denied (publickey).
+	fatal: Could not read from remote repository.
+# fix:
+# use https instead of ssh
+git remote set-url origin https://github.com/USERNAME/REPOSITORY
