@@ -111,13 +111,50 @@ Payload
 	Add a payload (SeaBIOS)
 	SeaBIOS version (1.12.0)
 
+Devices
+	Graphics initialization (Use libgfxinit)
+	Display ---> Framebuffer mode (Legacy VGA text mode)
+	# => tests: 1110
+	Add a Video Bios Table (VBT) binary to CBFS	# will use in-repo 'data.vbt' file
+	# => tests: 1110
+	Graphics initialization (None)	# this will let SeaBIOS to initialize VGA BIOS
+	Add a VGA BIOS image
+	(pci8086,0166.rom) VGA BIOS path and filename
+	(8086,0166) VGA device PCI ID
+	# put pci8086,0166.rom from Internet into repo root folder
+	# => single user boot chars are finaly not red but white
+	# => works better, but after suspend & resume, glxgears score: 90 frames instead of 300
+	Graphics initialization (Run VGA Option ROMs)  ---> Run VGA Option ROMs
+	# => isti kurac, ne radi nakon resumea kako treba
+	Re-run VGA Option ROMs on S3 resume
 
+
+# screen tests FHD (LVDS -> eDP)
+# 1 - single user mode
+# 2 - after i915 kms load
+# 3 - GPU video works
+# 4 - play FS video, tmux: try switching tabs
 # ------------------------------------------------------------------------- }}}
 
 make
 
 
+# misc								 										{{{
+# -----------------------------------------------------------------------------
+# 190202
+# LAN MAC address is stored at address 0x0 and 0x1000 in ./blobs_v2.72/flashregion_3_gbe.bin
 
+hexdump -C blobs_v2.72/flashregion_3_gbe.bin | grep "00000000\|00001000"
+00000000  3c 97 0e b7 35 ea 00 08  ff ff d3 00 49 01 00 80  |<...5.......I...|
+00001000  3c 97 0e b7 35 ea 00 08  ff ff d3 00 49 01 00 80  |<...5.......I...|
+
+ifconfig em0 | grep ether
+        ether 3c:97:0e:b7:35:ea
+# ------------------------------------------------------------------------- }}}
+
+# 
+I tried some combinations of VGA initialization and coreboot + TianoCore / SeaBIOS payloads and eventually ended up with coreboot (no VGA initialization) + SeaBIOS (uses VBIOS) + VBIOS!
+This approach however didn't work for Win7 but for Win8 and Win10 ... I'm suspecting some sort of incompatiblity of SeaBIOS and Win7 ... (used a not to recent coreboot master + SeaBIOS 1.12.1)
 
 # 										{{{
 # -----------------------------------------------------------------------------

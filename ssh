@@ -40,6 +40,12 @@ ForwardX11 yes
 # -----------------------------------------------------------------------------
 # errors
 # -----------------------------------------------------------------------------
+#
+ssh -X user@host
+xterm
+xterm: Xt error: Can't open display: :0
+# XXX: workaround: use ssh -X user@host xterm
+
 # tested with:
 ssh -X user@jail1 xterm
 
@@ -73,7 +79,10 @@ xterm: Selected font has no non-zero height for ISO-8859-1 encoding
 # font specified in client's .Xdefaults is missing on server:
 pkg install -y xorg-fonts-truetype
 
-# tested on FreeBSD 12.0 client/host with FreeBSD 12.0 jails and Linux VM under byhve
+tested on FreeBSD 12.0 client/host with FreeBSD 12.0 jails and Linux VM under byhve
+# jails OK
+# ssh vm-debian xterm -> works
+# ssh vm-debian and manually run xterm -> XXX
 # ------------------------------------------------------------------------- }}}
 
 # warnings:

@@ -15,32 +15,11 @@ u3g_load=YES
 # -----------------------------------------------------------------------------
 # add to /etc/ppp/ppp.conf:													{{{
 # -----------------------------------------------------------------------------
-vip:
- set log Phase Chat LCP IPCP CCP tun command
- ident user-ppp VERSION
- set device /dev/cuaU0
- set timeout 180
- set speed 921600
- set dial "ABORT BUSY TIMEOUT 3 \
-        \"\" \
-        AT OK-AT-OK \
-        AT+CFUN=1 OK-AT-OK \
-        AT+CMEE=2 OK-AT-OK \
-        AT+CSQ OK \
-        AT+CGDCONT=1,\\\"IP\\\",\\\"data.vip.hr\\\" OK \
-        ATD*99# CONNECT"
-
- set timeout 180
- enable dns
- resolv writable
- set ifaddr 10.0.0.1/0 10.0.0.2/0 255.255.255.0 0.0.0.0
- add default HISADDR
 # ------------------------------------------------------------------------- }}}
 APNs:
-    bonbon: web.htgprs
-    Vip:    data.vip.hr  # pretplata bez ugovorne obaveze
-Start ppp:
-ppp -ddial vip
+	bonbon:	web.htgprs
+	Vip:	data.vip.hr  # pretplata bez ugovorne obaveze
+	tele2:	internet.tele2.hr
 # 2019 vip & tele2 ppp.conf													{{{
 # -----------------------------------------------------------------------------
 # 2018.09.
@@ -66,26 +45,31 @@ tele2:
  set ifaddr 10.0.0.1/0 10.0.0.2/0 255.255.255.0 0.0.0.0
  add default HISADDR
 # ------------------------------------------------------------------------- }}}
-
-# check that WLAN card supports host mode (iwn doesn't support it):
-ifconfig wlan1 list caps | grep -i hostap
+# test it:
+ppp -ddial tele2
 
 # -----------------------------------------------------------------------------
 # WLAN AP 1st step: Enable WLAN AP (hostapd)
 # -----------------------------------------------------------------------------
+# check that WLAN card supports host mode (iwn doesn't support it):
+ifconfig wlan0 list caps | grep -i hostap
 # add to rc.conf:
 hostapd_enable="YES"
-wlans_urtwn0="wlan1"
-create_args_wlan1="wlanmode hostap"
-ifconfig_wlan1="inet 192.168.11.1 netmask 255.255.255.0"
-# edit /etc/hostapd.conf
-interface=wlan1
+wlans_ath0="wlan0"
+create_args_wlan0="wlanmode hostap"
+ifconfig_wlan0="inet 192.168.11.1 netmask 255.255.255.0"
+
+# restart wlan0:
+service netif restart wlan0
+
+# Create /etc/hostapd.conf
+interface=wlan0
 debug=1
 ctrl_interface=/var/run/hostapd
 ctrl_interface_group=wheel
-ssid=WLAN_AP_NAME
+ssid=WLAN_AP_NAME			# TODO change this
 wpa=1
-wpa_passphrase=PASSWORD
+wpa_passphrase=PASSWORD		# TODO change this
 wpa_key_mgmt=WPA-PSK
 wpa_pairwise=CCMP TKIP
 # start hostapd:
@@ -100,7 +84,7 @@ hostapd -d /etc/hostapd.conf
 # install FreeBSD port of OpenBSD dhcpd:
 pkg install dhcpd
 # configure it: /usr/local/etc/dhcpd.conf
-# DHCP server for wlan1 (IP: 192.168.11.1)
+# DHCP server for wlan0 (IP: 192.168.11.1)
 subnet 192.168.11.0 netmask 255.255.255.0
 {
 	option domain-name-servers 1.1.1.1;
@@ -119,17 +103,18 @@ dhcpd -d
 # WLAN AP 3rd step: forward traffic from WLAN to internet interface
 # -----------------------------------------------------------------------------
 # add to rc.conf:
-gateway_enable="YES"	# net.inet.ip.forwarding=1 ; service routing restart
+gateway_enable="YES"	# sysctl net.inet.ip.forwarding=1 ; service routing restart
 pf_enable="YES"
 pflog_enable="YES"
 # edit /etc/pf.conf and add:
 ext_if = "tun0"  # connected to internet - use tun0, not ue0
-int_if = "wlan1"
+int_if = "wlan0"
 localnet = $int_if:network
 nat on $ext_if from $localnet to any -> ($ext_if)
 pass  in on $int_if from $localnet to any keep state
 pass out on $int_if from $localnet to any keep state
 # start pf NAT:
+sysctl net.inet.ip.forwarding=1 ; service routing restart
 service pf start
 
 # -----------------------------------------------------------------------------
@@ -138,3 +123,25 @@ service pf start
 - try to ping host IP (eg 192.168.11.1) - if doesn't work, probably error in dhcpd
 - try to ping external IP address: 1.1.1.1 - if doesn't work, probably error in pf routing
 - try to ping external site: www.opendns.org - if doesn't work, (but pinging external IP works): probably error in DNS server - try to edit dhcpd.conf
+
+# -----------------------------------------------------------------------------
+# switching on the fly between client and host-ap mode
+# -----------------------------------------------------------------------------
+# disable 3G router (put host in WLAN client mode)
+killall ppp
+service hostapd stop
+sysrc create_args_wlan0=
+sysrc ifconfig_wlan0="WPA DHCP"
+service netif restart wlan0
+
+# enable 3G router
+ppp -ddial tele2
+sysrc create_args_wlan0="wlanmode hostap"
+sysrc ifconfig_wlan0="inet 192.168.11.1 netmask 255.255.255.0"
+service netif restart wlan0
+service dhcpd start
+service hostapd start
+
+# -----------------------------------------------------------------------------
+# devd setup for autoreset when modem is reconnected
+# -----------------------------------------------------------------------------

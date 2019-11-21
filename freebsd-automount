@@ -14,6 +14,12 @@ portmaster sysutils/exfat-utils sysutils/fusefs-exfat
 /var/log/automount.log
 /var/run/automount.state
 
+# manual attach
+/usr/local/sbin/automount da0s1 attach
+mount_msdosfs: /dev/mmcsd0s1: mount option <large> is unknown: Invalid argument
+# -> FIX: fetch newest version:
+fetch -o /usr/local/sbin/automount https://raw.githubusercontent.com/vermaden/automount/master/automount
+
 # patch it																	{{{
 # -----------------------------------------------------------------------------
 # 190113 it won't mount exfat USB (but it won't report any errors):

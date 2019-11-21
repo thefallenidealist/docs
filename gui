@@ -1,6 +1,11 @@
 #  vim: set ft=conf ts=4 sw=4 tw=0 fdm=marker noet :
 # Set default programs														{{{
 # -----------------------------------------------------------------------------
+# default .desktop files are in:
+/usr/local/share/applications/
+# user .desktop files are in:
+~/.local/share/applications
+
 # 190112
 https://www.romanzolotarev.com/xdg-mime.html
 
@@ -33,12 +38,104 @@ https://specifications.freedesktop.org/desktop-entry-spec/latest/ar01s07.html
 
 # Set the new default application:
 % xdg-mime default mupdf.desktop application/pdf
+
+# open with mpv instead of smplayer 191020
+xdg-mime query default video/webm
+smplayer.desktop
+
+xdg-mime default mpv.desktop video/webm
+xdg-mime query default video/flv
+mpv.desktop
 # ------------------------------------------------------------------------- }}}
 # DPI																		{{{
 # -----------------------------------------------------------------------------
+# DPI 190317
+# get current DPI:
+xrdb -query | grep dpi
+Xft.dpi:        120
+
+# get current DPI:
+xdpyinfo -display :0 -queryExtensions | grep dots
+  resolution:    120x120 dots per inch
+
+# find dimensions of the screen
+xrandr | grep -w connected
+LVDS1 connected 1920x1080+0+0 (normal left inverted right x axis y axis) 310mm x 170mm
+
+# set DPI
+xrandr --dpi 130
+# INFO 190317: Checked and tested:
+# only GTK2 applications (leafpad) will respect xrandr, but not GTK3 (Firefox, galculator)
+# all application will respect Xdefaults:
+# another way, in .Xdefaults put:
+Xft.dpi: 130
+
+
+# 190915 internet, 4K display:
+.xinitrc:
+xrandr --dpi 140 && xrdb -merge $HOME/.Xresources
 # ------------------------------------------------------------------------- }}}
 
 
+# xrandr video outputs														{{{
+# -----------------------------------------------------------------------------
+# 20170101
+xrandr --fb 3420x1080 --output LVDS1 --output HDMI1 --same-as LVDS1
+xrandr --output LVDS1 --output HDMI1 --same-as LVDS1
+xrandr --output LVDS1 --same-as HDMI1 --output HDMI1
+xrandr --output LVDS1 --output HDMI1
+
+# 191027
+# go to laptop mode:
+
+# reset to default:
+xrandr --auto
+# ------------------------------------------------------------------------- }}}
+
+
+
+
+
+# disable kbd/mouse															{{{
+# -----------------------------------------------------------------------------
+ xinput
+⎡ Virtual core pointer                        id=2    [master pointer  (3)]
+⎜   ↳ Virtual core XTEST pointer                    id=4    [slave  pointer  (2)]
+⎜   ↳ TrackPoint                                    id=6    [slave  pointer  (2)]
+⎣ Virtual core keyboard                       id=3    [master keyboard (2)]
+    ↳ Virtual core XTEST keyboard                     id=5    [slave  keyboard (3)]
+    ↳ <default keyboard>                              id=7    [slave  keyboard (3)]
+# disable TrackPoint:
+xinput disable 6
+# ------------------------------------------------------------------------- }}}
+# change brightness of internal LCD											{{{
+# -----------------------------------------------------------------------------
+# 191027
+# probably needs i915kms kernel module to be loaded
+# get levels:
+sysctl hw.acpi.video.lcd0.levels
+hw.acpi.video.lcd0.levels: 100 100 2 4 5 7 9 11 13 18 20 24 29 33 40 50 67 100
+# change brightness
+sysctl hw.acpi.video.lcd0.brightness=20
+hw.acpi.video.lcd0.brightness: 29 -> 20
+# ------------------------------------------------------------------------- }}}
+# change color of screen ("redshift")										{{{
+# -----------------------------------------------------------------------------
+https://flak.tedunangst.com/post/sct-set-color-temperature
+
+pkg install sct
+# Campfire style:
+sct 4500
+# Dust storm on Mars style:
+sct 2000
+# Coffee free all nighter style:
+sct 8000
+# back to default:
+sct
+# ------------------------------------------------------------------------- }}}
+
+
+#						{{{
 # -----------------------------------------------------------------------------
 # ------------------------------------------------------------------------- }}}
 

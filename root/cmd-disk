@@ -20,18 +20,70 @@ ataidle -P 0 /dev/ada1
 # or:
 camcontrol cmd ada1 -a "EF 85 00 00 00 00 00 00 00 00 00 00"
 
+# 181225
+# Format HDD so it's accessible on Windows:
+gpart add -t ms-basic-data da0
+mkfs.exfat -n "vanjskih500" /dev/da0p1
+mount.exfat /dev/da0p1 /mnt/usb
+
+
+# 170709
+# zfs list -H -t snapshot -o name -S creation | sort -r | xargs -n 1 zfs destroy -vr
+
+# 170815
+# show 10 oldest snapshosts
+# zfs list -H -t snapshot -o name -S creation | tail -10
+zfs list -H -t snapshot -o name -S creation | tail -10 | xargs -n1 zfs destroy  -vr
+
+# 180325
+# destroy all innovatorX/vm snapshots
+# INFO grep must be default because "color=always" will result in errors when piped to zfs
+zfs list -H -t snapshot -o name -S creation | \grep 'innovatorX/vm' | xargs -n1 zfs destroy -vr
+
+# 180624
+# change ZFS "mounting mount" without umounting:
+root@host:~ # zfs rename -u zroot/usr zroot/ROOT/default/usr
+
+# gpart (password or key) + ZFS											{{{
+# -------------------------------------------------------------------------
+# 190512
+# create crypted file
+zfs create -V 50G -o compression=lz4 bckp-ext/home
+# create key:
+dd if=/dev/random of=/root/key-bckp-home bs=256 count=1
+chmod 400 /root/key-bckp-home
+
+# crpyt it:
+# geli init -s 4096 -K /root/key-bckp-ext-home.geli /dev/zvol/bckp-ext/home
+# use only password:
+geli init -s 4096 -e AES-XTS -l 256 /dev/zvol/bckp-ext/home
+# use only key, without password
+geli init -s 4096 -e AES-XTS -l 256 -K /root/key-bckp-home -P /dev/zvol/bckp-ext/home
+# -> ljh
+# geli restore /var/backups/zvol_bckp-ext_home.eli /dev/zvol/bckp-ext/home
+
+# attach with key only:
+geli attach -pk /root/key-bckp-home /dev/zvol/bckp-ext/home
+
+zpool create bckp-ext-home /dev/zvol/bckp-ext/home.eli
+zfs set mountpoint=/mnt/bckp-ext/home bckp-ext-home
+
+# 190905 created crypted pool
+geli init -s 4096 -e AES-XTS -l 256 /dev/zvol/bckp-ext/home
+# ----------------------------------------------------------------------- }}}
+
 # 190915
 # running smartctl tests:
 smartctl -t short /dev/ada1
 # wait 10 minutes
 smartctl -t long /dev/ada1
 # wait 1:10 h
-	smartctl -l selftest /dev/ada1
+smartctl -l selftest /dev/ada1
 smartctl 7.0 2018-12-30 r4883 [FreeBSD 12.0-RELEASE-p9 amd64] (local build)
-	Copyright (C) 2002-18, Bruce Allen, Christian Franke, www.smartmontools.org
+Copyright (C) 2002-18, Bruce Allen, Christian Franke, www.smartmontools.org
 
-	=== START OF READ SMART DATA SECTION ===
-	SMART Self-test log structure revision number 1
-	Num  Test_Description    Status                  Remaining  LifeTime(hours)  LBA_of_first_error
+=== START OF READ SMART DATA SECTION ===
+SMART Self-test log structure revision number 1
+Num  Test_Description    Status                  Remaining  LifeTime(hours)  LBA_of_first_error
 # 1  Extended offline    Completed: read failure       10%      1761         473690216
 # 2  Short offline       Completed without error       00%      1760         -
