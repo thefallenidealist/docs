@@ -1,0 +1,127 @@
+# 191103
+#  vim: set ft=conf ts=4 sw=4 tw=0 fdm=marker noet :
+
+# Orange Pi Zero info														{{{
+# -----------------------------------------------------------------------------
+- connect it to at least direct USB port on PC with more than 0.5A (yellow one)
+
+There are no buttons or connectors to select FEL mode so the BootROM will only
+enter FEL mode if a special SD card is present or if there are no valid boot
+options.
+
+SPI flash 2 MB
+
+A red LED, connected to the PA17 pin.
+A green LED, connected to the PL10 pin.
+
+# Orange Pi Zero:
+Allwinner H3
+Quad-Core ARM Cortex-A7 @ 1.296GHz
+Mali400 MP2 @ 600Mhz
+
+Any code running on an A15 can run on a Cortex A7, just slower.
+# ------------------------------------------------------------------------- }}}
+# Download and install FreeBSD												{{{
+# -----------------------------------------------------------------------------
+# idea is to download non-specific image and patch it with specific dtb from ports
+ftp://ftp1.freebsd.org/pub/FreeBSD/releases/arm/armv7/ISO-IMAGES/12.1/FreeBSD-12.1-RC2-arm-armv7-GENERICSD.img.xz
+- has EFI/dtb/sun8i-h2-plus-orangepi-zero.dtb
+
+pkg install u-boot-orangepi-zero
+
+doas dd if=./FreeBSD-orangepi-zero.img of=/dev/mmcsd0 bs=1M conv=sync
+dd if=/usr/local/share/u-boot/u-boot-orangepi-zero/u-boot-sunxi-with-spl.bin of=/dev/mmcsd0 bs=1024 seek=8 conv=sync
+# conv=sync must be there, otherwise:
+# - booting only generic image - nothing
+# - booting with generic image + u-boot .bin = won't boot but will show:
+# U-Boot SPL 2019.10 (Oct 26 2019 - 08:28:44 +0000)
+# DRAM: 512 MiB
+# Trying to boot from MMC1
+# - booting only generic image - nothing
+# ------------------------------------------------------------------------- }}}
+# manual setup																{{{
+# -----------------------------------------------------------------------------
+# add user:
+pw useradd -G wheel,dialer,uucp -n -n johnny
+passwd johnny
+
+# change root password:
+passwd
+
+# connect it to the net:
+# /etc/wpa_supplicant.conf
+ctrl_interface=/var/run/wpa_supplicant
+eapol_version=2
+ap_scan=1
+fast_reauth=1
+
+network={
+		ssid="network"
+		scan_ssid=0
+		psk="password"
+		priority=2
+}
+
+# /etc/rc.conf
+wlans_rtwn0="wlan0"
+ifconfig_wlan0="WPA DHCP"
+
+service netif restart
+
+# client -> OrangePi
+# copy ssh key
+ssh-keygen -R orange
+ssh-copy-id -i ~/.ssh/key_orangepi.pub orange
+
+# login over ssh, su to root
+# disable root and password login in sshd:
+sed -i '' 's/#ChallengeResponseAuthentication yes/ChallengeResponseAuthentication no/' /etc/ssh/sshd_config
+service sshd restart
+
+pkg install -y isc-dhcp44-server
+
+# client -> OrangePi
+# copy conf files
+scp -R conf-orange-freebsd orange:
+
+# install files
+ln -sf /root/conf-orange-freebsd/loader.conf	/boot/
+ln -sf /root/conf-orange-freebsd/rc.conf		/etc/
+ln -sf /root/conf-orange-freebsd/hostapd.conf	/etc/
+ln -sf /root/conf-orange-freebsd/pf.conf		/etc/
+ln -sf /root/conf-orange-freebsd/ppp.conf		/etc/ppp/
+ln -sf /root/conf-orange-freebsd/dhcpd.conf		/usr/local/etc/
+# ------------------------------------------------------------------------- }}}
+
+# list connected clients:
+ifconfig wlan0 list sta
+
+# misc ARM based stuff														{{{
+# -----------------------------------------------------------------------------
+# print DT nodes:
+ofwdump -a
+
+devinfo -r
+
+# PA17 red
+# PL10 green
+# LEDs (close to microSD slot):
+# gpioctl -l | grep PA17
+pin 17: 0       PA17<OUT>
+# gpioctl -f /dev/gpioc1 -l | grep PL10
+pin 10: 1       PL10<OUT>
+
+# green LED:
+gpioctl -f /dev/gpioc1 10 0
+gpioctl -f /dev/gpioc1 10 1
+
+# red LED:
+gpioctl -f /dev/gpioc0 17 1
+
+# rename pin:
+gpioctl -f /dev/gpioc0 -n 17 red
+# read state of pin:
+gpioctl -f /dev/gpioc0 red
+# toggle:
+gpioctl -f /dev/gpioc0 -t red
+# ------------------------------------------------------------------------- }}}
