@@ -1,0 +1,9 @@
+# 190901
+# coreboot + GRUB (without SeaBIOS):
+
+# boot Linux on USB stick:
+linux (usb0,msdos1)/boot/vmlinux root=/dev/sda1
+initrd (usb0,msdos1)/boot/initrd
+
+# something:
+set root=(usb0,msdos1)

@@ -1,0 +1,33 @@
+# 191121
+FreeBSD 12.0-RELEASE
+unbound 1.9.4
+
+service unbound enable
+
+# 1) Download list(s)
+# wget https://raw.githubusercontent.com/StevenBlack/hosts/master/alternates/fakenews-gambling/hosts
+wget https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts
+awk 'BEGIN { OFS = "" } NF == 2 && $1 == "0.0.0.0" { print "local-zone: \"", $2, "\" static"}' hosts > /usr/local/etc/unbound/etc/adblock.conf
+
+# 2) Add line to /var/unbound/etc/unbound.conf at the end of the “server:” config options
+include: /usr/local/etc/unbound/ads.conf
+
+# 3) Restart unbound
+service unbound restart
+
+
+# TODO 191124:
+# - YouTube adblocking doesn't work
+# - autoupdate hosts list (cron)
+# - autoupdate it under different user
+pw useradd -s /sbin/nologin -n _adblock
+
+crontab -u _adblock -e
+@midnight 		/bin/sh /usr/local/bin/unbound-adblock.sh
+# that will create file:
+/var/cron/tabs/_adblock
+
+chown root:bin <download script>
+
+doas.conf:
+permit nopass _adblock cmd service args unbound reload

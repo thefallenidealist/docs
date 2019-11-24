@@ -1,0 +1,11 @@
+# 190824
+alias d='/bin/date +%y%m%d'
+flashrom -p internal:laptop=force_I_want_a_brick -r bios_read`d`.bin
+flashrom -p serprog:dev=/dev/cuaU0:921600 -r read1.bin
+
+flashrom -p internal:laptop=force_I_want_a_brick -w bios.bin
+flashrom -p serprog:dev=/dev/ttyU0:921600 -w bios.bin
+
+# copy from VM:
+scp vm-debian:src/bios/coreboot/build/coreboot.rom /tmp
+doas flashrom -p internal:laptop=force_I_want_a_brick -w /tmp/coreboot.rom

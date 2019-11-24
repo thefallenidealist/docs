@@ -1,0 +1,54 @@
+# 191020
+# ThinkPad T430s
+Intel HD Graphics 4000 (integrated Ivy Bridge GPU)
+
+# Intel HD 4000 specs:
+Intel HD Graphics 4000 supports resolution up to 1920×1200 through HDMI and 2560×1600 through DisplayPort. You should be safe.
+
+
+# dock/port replicator:
+ThinkPad Mini Dock Plus Series 3
+2x DisplayPort
+https://support.lenovo.com/us/en/accessories/migr-72871
+One Single-Link DVI-D digital monitor supporting 1920 x 1200 resolution
+One DisplayPort monitor supporting 2560 x 1600 resoltion
+
+For a Lenovo T430 Maximum external resolution:
+    2560x1600@60Hz (DisplayPort via optional Mini DP cable)
+    1920x1200@60Hz (single-link DVI-I via optional Mini DP cable)
+    2048x1536@75Hz (VGA)
+
+# ultrawide screen
+# 3440 x 1440
+I'm using a X220 with a Dell 34 curved with this resolution by default... no issues...
+
+
+# hacks
+Is 3840x2160@25hz (with reduced blanking).
+  supporting 4K (3840x2160). I'm writing this from a T430s on a 4K display.
+
+# triple monitor
+- possible if external 2xDP is used
+- internal LCD is not connected to DP
+- FHD mod chip - convert eDP panel to LVDS so it should be OK? # TODO 191020
+I currently run 3 external monitors using the Mini Dock Series 3.  1->DVI (dock), 2->DP (dock), 3->miniDP (laptop, using a miniDP->DP cable).
+I also verified that I can use the DP+miniDP+ internal laptop LCD, but that I cannot use DP+DVI+internal.
+
+
+# multimonitor or single ultrawide?
+- multimonitor setup better for productivity
+- better for multitasking with maximized video on one screen
+
+- single ultrawide better for viewing videos
+- no "giant bezels" in the middle
+
+
+#  ---------------------------------------------------------------------------
+Dell 22-24" FHD should be more than enough
+# 191121 one month of using U24:
+- black background is not that dark in comparison with laptop LCD
+- can be smaller, especially on shallow desk (65 cm)
+- resolution could be bigger (only visible at closeup)
+- image at edges little darkish - fault of thiny bezels?
+- 250 cd of backlight is enough, problem for me that is too bright at 0% (in lighted room)
+= not bad monitor, not that big, not that dark, can be used for programming, definitily can have more contrast

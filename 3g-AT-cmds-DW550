@@ -1,0 +1,180 @@
+# 161126
+# http://www.natisbad.org/E4300/Dell_Wireless_5530_AT_cmd_ref.html
+
+AT*: List all supported AT commands (described in Sony AT commands document)
+ATA: Answer incoming call command (described in Sony AT commands document)
+AT+BRSF: Bluetootth retrieve supported (described in Sony AT commands document)
+AT&C : Circuit 109 (DCD) control (described in Sony AT commands document)
+AT+CACM: Accumulated Call meter (described in Sony AT commands document)
+AT+CAMM: Accumulated call meter maximum (described in Sony AT commands document)
+AT+CAOC: Advice of charge (described in Sony AT commands document)
+AT+CBC: Battery charge (ver. 2) (described in Sony AT commands document)
+AT+CBST: Select Bearer Service Type (ver. 3) (described in Sony AT commands document)
+AT+CCFC: Calling forwarding number and conditions (ver. 2) (described in Sony AT commands document)
+AT+CCLK: Clock (ver. 4) (described in Sony AT commands document)
+AT+CCWA: Call waiting (ver .2) (described in Sony AT commands document)
+AT+CDIP: Called line identification presentation (described in Sony AT commands document)
+AT+CEAP: Seems useless. AT+CEAP=? just returns ok. AT+CEAP? returns ERROR
+AT+CEER: Extended error report (ver. 2) (described in Sony AT commands document)
+AT+CFUN: Set phone functionality (ver .2) (described in Sony AT commands document)
+
+    0 Minimum functionality, that is, the phone is turned off. Default value
+    1 Full functionality, that is, the phone is turned on
+    2 Disable phone transmit RF circuits only. Not supported
+    3 Disable phone receive RF circuits only. Not supported
+    4 Disable phone transmit and receive RF circuits. Note: This is often referred to as "flight mode"
+    5 GSM only (WCDMA radio off)
+    6 WCDMA only (GSM radio off)
+
+	Issuing an AT+CFUN=5 makes 3G unavailable and the connections happen in GPRS. On the contrary, issuing an AT+CFUN=6 prevents GPRS connections (which may mean no connection at all if min connection requirements are not met).
+
+AT+CGACT: PDP context activate or deactivate (described in Sony AT commands document)
+AT+CGATT: Packet service attach or detach (described in Sony AT commands document)
+AT+CGCLASS: see AT_CMD_GPRS.pdf for some reference. But the command seems pretty pointless in our case: the card reports a single possible value ("A") and only accepts that value, i.e. returning "ERROR" in other cases.
+AT+CGCMOD: PDP context modify (described in Sony AT commands document)
+AT+CGDATA: Enter data state (described in Sony AT commands document)
+AT+CGDCONT: Define PDP context (ver. 1) (described in Sony AT commands document)
+AT+CGDSCONT: Define secondary PDP context (described in Sony AT commands document)
+AT+CGEQMIN: 3G quality of service profile (minimum acceptable) (described in Sony AT commands document)
+AT+CGEQNEG: 3G quality of service profile (negotiated) (described in Sony AT commands document)
+AT+CGEQREQ: 3G quality of service profile (requested) (described in Sony AT commands document)
+AT+CGEREP: Packet domain event reporting (ver. 1) (described in Sony AT commands document)
+AT+CGMI: Request manufacturer identification (ver. 1) (described in Sony AT commands document)
+AT+CGMM: Request model identification (described in Sony AT commands document)
+ AT+CGMR: Request revision identification (described in Sony AT commands document)
+AT+CGPADDR: Show PDP address (described in Sony AT commands document)
+AT+CGQMIN: QoS profile. See http://mybroadband.co.za/vb/archive/index.php/t-18042.html
+AT+CGQREQ: QoS profile. See http://mybroadband.co.za/vb/archive/index.php/t-18042.html
+AT+CGREG: Network registration reporting (described in Sony AT commands document)
+AT+CGSMS: Select service for MO SMS messages (described in Sony AT commands document)
+AT+CGSN: Request product serial number identification (described in Sony AT commands document)
+AT+CGTFT: Traffic flow template (described in Sony AT commands document)
+AT+CHLD: Call hold and multiparty (ver. 1) (described in Sony AT commands document)
+AT+CHSC: HSCSD current call parameters (ver. 2) (described in Sony AT commands document)
+AT+CHSD: HSCSD device parameters (ver. 2) (described in Sony AT commands document)
+AT+CHSN: HSCSD non-transparent call configuration (ver. 2) (described in Sony AT commands document)
+AT+CHSR: HSCSD parameters report (ver. 2) (described in Sony AT commands document)
+AT+CHSU: HSCSD automatic user-initiated upgrade (described in Sony AT commands document)
+AT+CHUP: Hang up call (described in Sony AT commands document)
+AT+CIMI: Request international mobile subscriber identity (described in Sony AT commands document)
+AT+CIND: Indicator control (ver. 5) (described in Sony AT commands document)
+
+	AT+CIND=?
+	+CIND: ("battchg",(0-5)),("signal",(0-5)),("batterywarning",(0-1)),("chargerconnected",(0-1)),("service",(0-1)),("sounder",(0-1)),("message",(0-1)),("call",(0-1)),("roam",(0-1)),("smsfull",(0-1)),("callsetup",(0-3)),("callheld",(0-1))
+
+	OK
+
+	AT+CIND?
+	+CIND: 5,2,0,0,1,0,0,0,0,0,0,0
+
+	OK
+AT+CKPD: Keypad control (ver. 7) (described in Sony AT commands document)
+AT+CLAC: List all available AT commands (described in Sony AT commands document)
+AT+CLCC: List current calls (described in Sony AT commands document)
+AT+CLCK: Facility lock (ver. 5) (described in Sony AT commands document)
+AT+CLIP: Graphical caller ID presentation (described in Sony AT commands document)
+AT+CLIR: Calling line identification restriction (described in Sony AT commands document)
+AT+CLVL: Loudspeaker volume level (described in Sony AT commands document)
+AT+CMAR: Master reset (described in Sony AT commands document)
+AT+CMEC: Mobile equipment control mode (described in Sony AT commands document)
+AT+CMEE: Report mobile equipment error (described in Sony AT commands document)
+AT+CMER: Mobile equipment event reporting (described in Sony AT commands document)
+AT+CMGC: Send command (ver. 1) (described in Sony AT commands document)
+AT+CMGD: Delete message (described in Sony AT commands document)
+AT+CMGF: Message format (ver. 1) (described in Sony AT commands document)
+AT+CMGL: List message (ver. 2) (described in Sony AT commands document)
+AT+CMGR: Read message (ver. 2) (described in Sony AT commands document)
+AT+CMGS: Send message (ver. 2) (described in Sony AT commands document)
+AT+CMGW: Write message to memory (ver. 2) (described in Sony AT commands document)
+AT+CMMS: More messages to send (described in Sony AT commands document)
+AT+CMSS: Send from storage (ver. 2) (described in Sony AT commands document)
+AT+CMUT: Mute control (described in Sony AT commands document)
+AT+CMUX: Switch to 07.10 multiplexer (ver. 2) (described in Sony AT commands document)
+AT+CNMI: New messages indication to TE (ver. 4) (described in Sony AT commands document)
+AT+CNUM: Subscriber number (ver. 2) (described in Sony AT commands document)
+AT+COLP: Connected line identification presentation (described in Sony AT commands document)
+AT+COPN: Read operator names (described in Sony AT commands document)
+AT+COPS: Operator selection (ver. 2) (described in Sony AT commands document)
+AT+CPAS: Phone activity status (ver. 3) (described in Sony AT commands document)
+AT+CPBF: Phonebook find (ver. 2) (described in Sony AT commands document)
+AT+CPBR: Phonebook read (ver. 2) (described in Sony AT commands document)
+AT+CPBS: Phonebook storage (ver. 3) (described in Sony AT commands document)
+AT+CPBW: Phonebook write (ver. 4) (described in Sony AT commands document)
+AT*CPI: Call progress information (described in Sony AT commands document)
+AT+CPIN: PIN control (ver. 2) (described in Sony AT commands document)
+AT+CPMS: Preferred message storage (ver. 4) (described in Sony AT commands document)
+AT+CPOL: Preferred operator list (described in Sony AT commands document)
+AT+CPROT: Enter protocol mode (described in Sony AT commands document) Can be used to find out which version of OBEX the card supports.
+AT+CPUC: Price Per Unit and Currency Table, see gprs_at.pdf.
+AT+CPWD: Change password (Ver. 3) (described in Sony AT commands document)
+AT+CR: Service reporting control (described in Sony AT commands document)
+AT+CRC: Cellular result codes (ver. 2) (described in Sony AT commands document)
+AT+CREG: Network registration (ver. 2) (described in Sony AT commands document)
+AT+CRES: Restore settings (described in Sony AT commands document)
+AT+CRLP: Radio link protocol (ver. 2) (described in Sony AT commands document)
+AT+CRSM: Restricted SIM access (described in Sony AT commands document)
+AT+CSAS: Save settings (described in Sony AT commands document)
+AT+CSCA: Service centre address (ver. 2) (described in Sony AT commands document)
+AT+CSCS: Select TE character set (ver. 3) (described in Sony AT commands document)
+AT+CSMS: Select message service (ver.2) (described in Sony AT commands document)
+AT+CSQ: Signal quality (ver.1) (described in Sony AT commands document)
+AT+CSSN: Supplementary service notification (ver. 2) (described in Sony AT commands document)
+AT+CUSD: Unstructured supplementary service data (ver. 2) (described in Sony AT commands document)
+AT+CV120: V.120 rate adaption protocol (described in Sony AT commands document)
+AT+CVHU: Voice hangup control (described in Sony AT commands document)
+ATD: Dial command (ver. 5) (described in Sony AT commands document)
+AT&D: Circuit 108 (DTR) response (described in Sony AT commands document)
+AT+DR: Data compression reporting (described in Sony AT commands document)
+AT+DS: Data compression (ver. 3) (described in Sony AT commands document)
+ATE: Command echo (ver. 2) (described in Sony AT commands document)
+AT*E2CFUN: The prototype of the command as reported by the device is the following:
+
+		AT*E2CFUN=?
+		*E2CFUN: (0-1)
+
+		OK
+
+		The command can be used to enable/disable asynchronous notification of change in Phone Functionality. This is best explained with examples:
+
+		AT+CFUN=6                        << Force WCDMA mode only
+		OK
+
+		AT*E2CFUN?                       << Ask for current status. Reports 6,
+		*E2CFUN: 0,6,0                   << i.e. WCDMA mode only.
+
+		OK
+
+		AT+CFUN=5                        << Force GPRS mode only
+		OK
+
+		AT*E2CFUN?                       << Ask for current status. Reports 5,
+		*E2CFUN: 0,5,0                   << i.e. GPRS only
+
+		OK
+
+		AT+CFUN=1                        << Force full mode
+		OK
+
+		AT*E2CFUN?                       << Ask for current status. Reports 1,
+		*E2CFUN: 0,1,0                   << i.e. full mode
+
+		OK
+
+		AT*E2CFUN=1                      << Force asynchronous notification
+		OK
+
+		AT+CFUN=6                        << Change mode from 1 to 6
+		OK
+
+		*E2CFUN: 1,6,0                   << Asynchronous notification. New
+											mode is 6 (first value is now 1,
+											indicating async. notification
+											is enabled
+		AT*E2CFUN only accept 0 or 1 as parameter (when a value is provided). This is in fact the value of the mode, i.e. the first paramater returned when issuing an AT*E2CFUN. When the mode is set to value 1, the card returns *E2CFUN: X,Y,Z value when the phone functionality level is changed. For instance, a showed in previous example, when setting the level back to 6 using AT+CFUN, an *E2CFUN: 1,6,0.
+		XXX I have currently no clue on the purpose and meaning of last paramater.
+AT*E2CHAN: Returns UMTS channel information.
+
+	AT*E2CHAN=?
+	*E2CHAN: (0-1),(0-1)
+
+	OK
