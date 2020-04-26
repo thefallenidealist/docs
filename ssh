@@ -1,10 +1,101 @@
-# Created 190311
+# Created 181208
+# Created 190311 - x11 forwarding
 #  vim: set ft=conf ts=4 sw=4 tw=0 fdm=marker noet :
-# 190504 tutorial
 
 # ssh keys																	{{{
 # -----------------------------------------------------------------------------
+# https://www.romanzolotarev.com/ssh.html
+- using SSH keys is generally much more secure
+The issue with passwords is that they are typically are created manually,
+without sufficient length or complexity in content. Therefore, they can be
+susceptible to being compromised by brute force attacks. SSH keys provide a
+reliably secure alternative.
+
+# generate ssh key
+# - no need to use password for ssh key
+
+ssh-keygen -t ed25519 -a 100
+ssh-keygen -t ed25519 -a 100 -f ~/.ssh/key_name
+
+# copy public key to server:
+ssh-copy-id -i .ssh/id_ed25519.pub johnny@remote
+ssh-copy-id -i .ssh/id_ed25519.pub remote
+
+# try to login without password
+ssh remote
+
+# disable password auth on server:
+/etc/ssh/sshd_config
+> ChallengeResponseAuthentication no
+service sshd restart
 # ------------------------------------------------------------------------- }}}
+# ssh key example															{{{
+# -----------------------------------------------------------------------------
+# 191222 Enable passwordless ssh login for root
+ssh-keygen -t ed25519 -a 100 -f ~/.ssh/root_laptop1
+
+# remote machine:
+# temporary enable password and root login to copy ssh keys:
+# /etc/ssh/sshd_config
+	PasswordAuthentication yes
+	PermitRootLogin yes
+service sshd restart
+
+# copy key to remote:
+ssh-copy-id -i .ssh/root_laptop1.pub root@laptop2
+# that will add key to remote:.ssh/authorized_keys
+
+# test it
+ssh -i ~/.ssh/root-laptop1 root@laptop2
+
+# disable password login on remote:
+# /etc/ssh/sshd_config
+	# PasswordAuthentication yes
+	# PermitRootLogin yes
+	PermitRootLogin without-password
+
+# create conf file so "-i ~/.ssh/root-laptop1" don't need to be used
+~/.ssh/config
+Host laptop2
+	IdentityFile ~/.ssh/root-laptop1
+# ------------------------------------------------------------------------- }}}
+# auto ssh																	{{{
+# -----------------------------------------------------------------------------
+# on client:
+pkg install -y autossh
+# simple
+autossh -M 0 user@host
+# -M 0 : disable Monitoring Port
+
+# Use autossh with sshfs
+user $sshfs -o reconnect,compression=yes,transform_symlinks,ServerAliveInterval=45,ServerAliveCountMax=2,ssh_command='autossh -M 0' username@server:/ /mnt/remote"
+# ------------------------------------------------------------------------- }}}
+# generating extra/separate key for specific host							{{{
+# -----------------------------------------------------------------------------
+# 181215 for OpenBSD OrangePi
+# generate key only used for specific host
+ssh-keygen -t ed25519 -a 100 -f ~/.ssh/key_orangepi
+<enter>
+<enter>
+
+ssh-copy-id -i .ssh/key_orangepi.pub orange
+
+# disable OpenBSD's sshd password login:
+# /etc/ssh/sshd_config
+> ChallengeResponseAuthentication no
+> PasswordAuthentication no
+/etc/rc.d/sshd restart
+
+# try to login without password:
+ssh -i ~/.ssh/key_orangepi orange
+
+# client configuration (no need for ssh -i <key>)
+# ~/.ssh/config
+Host orange
+	# User johnny # username on remote host
+	IdentityFile ~/.ssh/key_orangepi
+# ------------------------------------------------------------------------- }}}
+
 # X11 forwarding															{{{
 # -----------------------------------------------------------------------------
 client - machine which will run ssh user@server

@@ -1,0 +1,66 @@
+# 200406
+# -----------------------------------------------------------------------------
+# 
+# -----------------------------------------------------------------------------
+FreeBSD 12.1-RELEASE
+ThinkPad x220t
+NAS server
+
+# install
+- BIOS settings:  
+- boot and install minimal OS (without encryption so it can boot automatically)
+- add user, enable sshd
+- gpart set -a lenovofix ada0
+- server: add WLAN MAC to DHCP and assign fixed IP address
+- reboot
+
+# ssh key - user															{{{
+# -----------------------------------------------------------------------------
+# client:
+# SSH keys:
+ssh-keygen -t ed25519 -a 100 -f ~/.ssh/key-diskaros
+ssh-copy-id -i .ssh/key-diskaros diskaros
+# ~/.ssh/config:
+	Host diskaros
+		IdentityFile ~/.ssh/key-diskaros
+
+# server: disable loging with password and root login:
+# /etc/ssh/sshd_config
+	ChallengeResponseAuthentication no
+service sshd restart
+
+# try it:
+ssh diskaros
+- no need to enter username nor password
+# ------------------------------------------------------------------------- }}}
+
+# ssh key - root															{{{
+# -----------------------------------------------------------------------------
+# SSH key for root (useful for copying conf files/scp),
+# on server:
+# /etc/ssh/sshd_config
+	ChallengeResponseAuthentication yes
+	PasswordAuthentication yes
+	PermitRootLogin yes
+service sshd restart
+
+# generate and copy key:
+ssh-keygen -t ed25519 -a 100 -f ~/.ssh/key-diskaros-root
+ssh-copy-id -i .ssh/key-diskaros-root diskaros
+# client's /root/.ssh/config:
+Host diskaros
+	IdentityFile ~/.ssh/key-diskaros-root
+
+# disable server's password auth, enable root login but key only:
+# /etc/ssh/sshd_config
+	ChallengeResponseAuthentication no
+	PasswordAuthentication yes
+	PermitRootLogin without-password
+service sshd restart
+# ------------------------------------------------------------------------- }}}
+
+# server configuration
+rm /etc/motd
+zfs create -o mountpoint=/usr/ports diskaros/port
+zfs create -o mountpoint=/var/cache/pkg diskaros/pkg_cache
+pkg install zsh tmux neovim git rsync

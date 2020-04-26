@@ -1,0 +1,38 @@
+# 191207
+# GTK2
+- download Divinorum theme
+- extract it to ~/.themes
+	~/.themes/Divinorum-Blue
+- select theme with gtk-chtheme (pkg install gtkchtheme)
+-> writes ~/.gtkrc-2.0
+	include "/home/johnny/.themes/Divinorum-Blue/gtk-2.0/gtkrc"
+	include "/home/johnny/.gtkrc.mine"
+
+
+# GTK3
+- Download theme:
+- Extract it to ~/.themes
+- run it:
+GTK_THEME=Adwaita:dark galculator
+GTK_THEME=Mojave-dark galculator
+
+# QT
+
+# KiCAD colors
+
+# GTK2 Emacs shortcuts
+~/.gtkrc.mine
+	gtk-key-theme-name = "Emacs"
+# shortcuts defined in:
+/usr/local/share/themes/Emacs/gtk-2.0-key/gtkrc
+# make custom in gtkrc.mine
+	binding "gtk-emacs-text-entry"
+	{
+	   bind "<alt>BackSpace" { "delete-from-cursor" (word-ends, -1) }
+	}
+
+# GTK3 Emacs shortcuts
+~/.config/gtk-3.0/settings.ini
+	[Settings]
+	gtk-key-theme-name = Emacs
+

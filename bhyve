@@ -1,0 +1,277 @@
+# Created 190119
+#  vim: set ft=conf ts=4 sw=4 tw=0 fdm=marker noet :
+# initial configuration														{{{
+# -----------------------------------------------------------------------------
+pkg install vm-bhyve
+zfs create pool/vm
+sysrc vm_enable="YES"
+sysrc vm_dir="zfs:pool/vm"
+vm init
+cp /usr/local/share/examples/vm-bhyve/* /mnt/vm/.templates/
+
+# create switch (see NAT section below)
+# ------------------------------------------------------------------------- }}}
+# network NAT																{{{
+# -----------------------------------------------------------------------------
+# https://github.com/churchers/vm-bhyve/wiki/NAT-Configuration
+- use wlan as interface for guests
+host IP: 192.168.4.1.
+
+/etc/rc.conf
+gateway_enable="yes"
+pf_enable="yes"
+
+/etc/pf.conf
+vm_external_if=wlan0
+nat on $vm_external_if from {192.168.1.0/24} to any -> ($vm_external_if)
+
+# check it:
+sysctl net.inet.ip.forwarding=1
+service pf start
+pfctl -s nat
+
+# vm-bhyve
+vm switch create -a 192.168.4.1/24 public
+
+# guest configuration - fixed IP:
+	ifconfig vtnet0 192.168.4.2
+	route add default 192.168.4.1
+	# test it:
+	ping 192.168.4.1
+	ping 1.1.1.1
+	# INFO 190120: if ping to Internet doesn't work check pf.conf (addresses), restart pf and try again
+
+# guest configuration - DHCP:
+# install OpenBSD's dhcpd:
+pkg install -y dhcpd
+# or dnsmasq
+
+# TODO 190120:
+# - don't use gateway and pf on host
+# ------------------------------------------------------------------------- }}}
+# console																	{{{
+# -----------------------------------------------------------------------------
+vm console fbsd-guest #	default
+
+# exit console:
+[cu]: ~.
+
+# change console to tmux:
+edit .config/system.conf and add
+console="tmux"
+
+- don't use 'vm -f' use 'vm start <guest name>'
+tmux attach -t <guest name>
+# for nested tmux sessions:
+<tmux prefix> <tmux 'bind -n <key> send-prefix'
+# in my case:
+C-j C-k <tmux key, eg: x/d/C-t>
+# later changed to:
+C-x <tmux key, eg: x/d/C-t>
+# ------------------------------------------------------------------------- }}}
+
+# guest - FreeBSD															{{{
+# -----------------------------------------------------------------------------
+vm iso https://download.freebsd.org/ftp/releases/ISO-IMAGES/12.0/FreeBSD-12.0-RELEASE-amd64-bootonly.iso
+vm create fbsd-guest
+vm install -f fbsd-guest FreeBSD-12.0-RELEASE-amd64-bootonly.iso
+	# -f = foreground
+vm console fbsd-guest # if -f is not used
+- if dhcpd is not running, use fixed IP address (192.168.4.x)
+# ------------------------------------------------------------------------- }}}
+# guest - OpenBSD															{{{
+# -----------------------------------------------------------------------------
+pkg install -y grub2-bhyve
+vm iso https://cdn.openbsd.org/pub/OpenBSD/6.4/amd64/install64.iso
+
+# edit ./.templates/openbsd.conf to include latest OpenBSD
+#     (change /6.2/ to /6.4/)
+vm create -t openbsd obsd
+vm -f install obsd install64.iso
+
+# -----------------------------------------------------------------------------
+# installer
+- use vio0
+- use fixed IP: 192.168.4.2
+- console: com0, 115200
+- MBR: works
+- GPT: won't boot with legacy BIOS
+- pkg: Set -game64.tgz -xbase64.tgz -xshare64.tgz -xfont64.tgz -xserv64.tgz
+- timezone: CET
+
+# boot it without CD:
+vm -f start obsd
+# after boot:
+syspatch
+vi /etc/motd
+# ------------------------------------------------------------------------- }}}
+# guest - Windows 7															{{{
+# -----------------------------------------------------------------------------
+# 190120
+pkg install -y bhyve-firmware tigervnc
+
+vm create -t windows win7
+vi win7/win7.conf
+# for older releases than Windows 10 add this in conf:
+disk0_opts="sectorsize=512"
+# optional:
+graphics_res="1600x900"
+
+# put iso in /mnt/vm/.iso
+# rename it so that filename doesn't contain spaces
+cd .iso
+ln -s Windows... win7.iso
+
+vm install win7 win7.iso
+vncviewer 0.0.0.0:5900
+
+pkg delete -y tigervnc
+# ------------------------------------------------------------------------- }}}
+# guest - Windows 10														{{{
+# -----------------------------------------------------------------------------
+# 190120
+# 190820
+pkg install -y bhyve-firmware tigervnc tightvnc
+
+# find .iso which can be booted over UEFI. Try it with command:				{{{
+bhyve -c 2 -m 4G -w -u -H \
+	-s 0,amd_hostbridge \
+	-s 3,ahci-cd,win10-uefi.iso \
+	-s 4,ahci-hd,disk.img \
+	-s 5,virtio-net,tap0 \
+	-s 29,fbuf,tcp=0.0.0.0:5900,w=1600,h=900,vga=off,wait \
+	-s 6,xhci,tablet \
+	-s 31,lpc -l com1,stdio \
+	-l bootrom,/usr/local/share/uefi-firmware/BHYVE_UEFI.fd \
+guest
+# in another shell:
+vncviewer 0.0.0.0:5900
+# -> it should say "Press any key to boot from CD/DVD"
+# ------------------------------------------------------------------------- }}}
+
+vm create -t windows win10
+vi win10/win10.conf
+# optional:
+graphics_res="1600x900"
+
+vm create -t windows win10
+vm install win10 win10-clean-uefi.iso
+vncviewer 0.0.0.0:5900
+# ------------------------------------------------------------------------- }}}
+# guest - DragonFly BSD														{{{
+# -----------------------------------------------------------------------------
+vm create -t dragonfly dfbsd
+vm -f install dfbsd dfly-x86_64-5.4.1_REL.iso
+-> it uses UEFI (so connect via VNC)
+# ------------------------------------------------------------------------- }}}
+# guest - Debian															{{{
+# -----------------------------------------------------------------------------
+# create and install as usual/default
+
+If guided LVM partition is used:
+edit <vm name>/<vm name>conf and change:
+	grub_run_partition="1"
+	grub_run_dir="/boot/grub"
+to
+	grub_run_partition="msdos1"
+	grub_run_dir="/grub"
+# ------------------------------------------------------------------------- }}}
+
+
+# dhcpd																		{{{
+# -----------------------------------------------------------------------------
+# 190120 FreeBSD host + OpenBSD's dhcpd
+pkg install -y dhcpd
+# network subnet is 192.168.4.x (can be viewed with vm switch list)
+# http://cvsweb.openbsd.org/cgi-bin/cvsweb/~checkout~/src/usr.sbin/dhcpd/dhcpd.conf?rev=1.1&content-type=text/plain
+
+/usr/local/etc/dhcpd.conf
+	option  domain-name "experiment-laptop";
+	option domain-name-servers 1.1.1.1;
+
+	subnet 192.168.4.0 netmask 255.255.255.0
+	{
+		option routers 192.168.4.1;
+		option domain-name "bhyve-net.int";
+
+		range 192.168.4.100 192.168.4.200;
+	}
+
+echo 'dhcpd_enable="YES"' >> /etc/rc.conf
+service dhcpd restart
+# ------------------------------------------------------------------------- }}}
+
+# GRUB cmds																	{{{
+# -----------------------------------------------------------------------------
+ls
+ls (host)/usr/local/...
+# ------------------------------------------------------------------------- }}}
+
+
+vm stop <guest name>
+vm stopall
+vm destroy <guest name>
+vm configure <guest name>
+vm image list
+bhyvectl --vm=win10 --destroy
+# list VMs:
+ll /dev/vmm/
+
+# USB (PCI) thru															{{{
+#------------------------------------------------------------------------------
+# 190713
+# check if CPU has support:
+acpidump -t | grep DMAR
+> DMAR: Length=208, Revision=1, Checksum=247,
+
+# check if PCI card has support (MSI interrupt):
+xhci0@pci0:0:20:0:      class=0x0c0330 card=0x21fb17aa chip=0x1e318086 rev=0x04 hdr=0x00
+    vendor     = 'Intel Corporation'
+    device     = '7 Series/C210 Series Chipset Family USB xHCI Host Controller'
+    class      = serial bus
+    subclass   = USB
+    cap 01[70] = powerspec 2  supports D0 D3  current D0
+    cap 05[80] = MSI supports 8 messages, 64 bit enabled with 1 message
+# INFO: echi0 and ehci1 doesn't have MSI support
+
+#------------------------------------------------------------------------------
+# /boot/loader.conf (both lines are need):
+vmm_load="YES"
+pptdevs="0/20/0"
+
+- reboot
+
+# debian.conf (vm-bhyve)
+passthru0="0/20/0"
+
+# XXX if wrong passthru device is provided (echi0 or ehci1 which doesn't have MSI):
+vm start -f debian
+- GRUB screen appears
+- nothing
+- vm/debian/vm-bhyve.log:
+  Jul 13 14:52:28: bhyve exited with status 4
+
+# XXX
+- not even one extern or internal (mSATA) connetor seems to be connected to 0/20/0
+#-------------------------------------------------------------------------- }}}
+# sound																		{{{
+#------------------------------------------------------------------------------
+# 200315
+# apply patches from -CURRENT to 12.1-RELEASE:
+https://svnweb.freebsd.org/base?view=revision&revision=349335
+https://svnweb.freebsd.org/base?view=revision&revision=350255
+# or commits in GitHub FreeBSD -master tree:
+650d07809ae099ab8f062186dcaf0b5034f00fb7
+b151e337d8188a838234f142a86ee7bbe6653a50
+
+- create VM with vm-bhyve
+- add to /mnt/vm/<vm name>/<vm name>.conf
+bhyve_options="-s 6,hda,play=/dev/dsp,rec=/dev/dsp"
+
+# or with bare bhyve command (not tested):
+# -s 6,hda,play=/dev/dsp,rec=/dev/dsp
+
+After running FreeBSD 12.1 bootonly CD it works:
+- there is /dev/dsp
+- cat /bin/sh > /dev/dsp
+#-------------------------------------------------------------------------- }}}
