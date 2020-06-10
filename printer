@@ -1,0 +1,100 @@
+# 200331
+# Orange Pi Zero, FreeBSD 12.1-RELEASE
+# -----------------------------------------------------------------------------
+How to use Samsung ML-1660 printer on ARM SBC without Linux emulation
+# -----------------------------------------------------------------------------
+Problem with old/official way is that Samsung provided ppd files expects to have "rastertospl" program which is available for download from Samsung site but it is provided for Linux only (for x86, amd64, arm). FreeBSD doesn't have Linux emulation (no linux.ko) for arm architecture.
+Additional plus of this tutorial is that will work on amd64 without Linux emulation.
+
+pkg install cups-filters splix avahi-app
+# how you should have theese files:
+/usr/local/libexec/cups/filter/rastertoqpdl
+/usr/local/share/cups/model/samsung/ml1660.ppd
+
+less /usr/local/share/cups/model/samsung/ml1660.ppd | grep rasterto
+*cupsFilter: "application/vnd.cups-raster 0 rastertoqpdl"
+# -> no need to download files manualy (rastertospl) and to use Linux emulation to run it :)
+
+# create /etc/devfs.rules and add:
+[system=10]
+add path 'unlpt*' mode 0660 group cups
+add path 'ulpt*' mode 0660 group cups
+add path 'lpt*' mode 0660 group cups
+
+# /etc/rc.conf:
+cupsd_enable="YES"
+devfs_system_ruleset="system"
+dbus_enable="YES"
+avahi_daemon_enable="YES"
+
+# To check if avahi is working:
+avahi-browse -a
+	+  wlan0 IPv4 Samsung ML-1660 Series @ naranca              _ipp._tcp            local
+	+  wlan0 IPv4 Samsung ML-1660 Series @ naranca              _ipps._tcp           local
+	+  wlan0 IPv4 Samsung ML-1660 Series @ naranca              _printer._tcp        local
+	+  wlan0 IPv4 naranca                                       _ssh._tcp            local
+	+  wlan0 IPv4 naranca                                       _sftp-ssh._tcp       local
+	+  wlan0 IPv4 CUPS @ naranca                                _http._tcp           local
+
+				# optional: enable firewall forwarding of CUPS from inside to the outside (port 631 -> port 6310) - Not used
+pw groupmod cups -m user
+# logout and relogin
+
+# Start services or reboot
+service devfs restart
+service dbus restart
+service avahi-daemon restart
+service cupsd restart
+
+CUPS setup:
+on print server (over ssh or console):
+# debugging:
+/usr/local/etc/cups/cupsd.conf
+- set "LogLevel debug"
+- logs will be in /var/log/cups/error_log
+
+In browser navigate to: <hostname>:631
+Login as root otherwise action like adding/deleting printer will silently fail
+
+# client setup - Android													{{{
+# -----------------------------------------------------------------------------
+None.
+
+Firefox example: Page -> Printing -> More: select 1 page -> Print
+# ------------------------------------------------------------------------- }}}
+
+# client setup - FreeBSD													{{{
+# -----------------------------------------------------------------------------
+pkg install avahi-app nss_mdns
+
+# debug: disover network printers:
+nmap -p 9100,515,631 192.168.11.1
+	631/tcp  open   ipp
+avahi-browse -a
+	+  wlan0 IPv4 Samsung ML-1660 Series @ naranca              _ipp._tcp            local
+
+# cleanup:
+rm -rf /usr/local/etc/cups /var/log/cups /var/spool/cups /usr/local/libexec/cups
+
+login to localhost:631 as root (otherwise actions like adding/deleting printer will silenlty fail)
+Administration -> Find new printers:
+
+Make: Generic -> Continue
+Model: Generic IPP -> Add printer
+Paper: A4
+
+# old problems
+# problem1:
+- printing works on ARM, works from Android phone, doesn't work from FreeBSD client -> ARM
+- nothing happens, clicking on (client) Show All Jobs shows that job is canceled
+- (on client) /var/log/cups/error_log shows:
+(/usr/local/libexec/cups/filter/gstoraster) stopped with status 1.
+- Debug logs shows:
+(/usr/local/libexec/cups/filter/rastertospl) stopped with status 108 (Exec format error)
+ - that was manually printer is manually selected (with ppd file provided by Samsung somewhere from 2010)
+ - that .ppd file expected rastertospl on that location (it was copied by me sometime before)
+ - rastertospl was for x86 Linux
+ -> don't select manually printer, "Generic IPP" was the key
+
+# INFO 200610: works on FreeBSD 12.1 client & server
+# ------------------------------------------------------------------------- }}}
