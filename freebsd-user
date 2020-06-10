@@ -1,0 +1,16 @@
+# 160704
+# add user to groups
+pw usermod -n johnny -G johnny,wheel,vboxusers,uucp,dialer,video
+
+# 170114
+# add user to group
+pw groupmod group_name -m user
+pw groupshow group_name
+
+# 181022
+# create new user
+pw groupadd -g 1002 -n user &&  pw useradd -n user -u 1002 -c "test user" -g user -s /usr/local/bin/zsh -d /home/user -m -w none
+echo "permit nopass keepenv johnny as user" >> /usr/local/etc/doas.conf
+
+# delete user:
+rmuser -y user

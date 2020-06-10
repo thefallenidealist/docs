@@ -170,10 +170,10 @@ xterm: Selected font has no non-zero height for ISO-8859-1 encoding
 # font specified in client's .Xdefaults is missing on server:
 pkg install -y xorg-fonts-truetype
 
-tested on FreeBSD 12.0 client/host with FreeBSD 12.0 jails and Linux VM under byhve
-# jails OK
-# ssh vm-debian xterm -> works
-# ssh vm-debian and manually run xterm -> XXX
+# error:
+# ssh -X user@remote xterm -> works
+# ssh -X user@remote and then start xterm -> don't work
+- unset $DISPLAY in .zshrc on server and DISPLAY will be se to correct value
 # ------------------------------------------------------------------------- }}}
 
 # warnings:

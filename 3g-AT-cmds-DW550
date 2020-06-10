@@ -1,6 +1,10 @@
 # 161126
 # http://www.natisbad.org/E4300/Dell_Wireless_5530_AT_cmd_ref.html
 
+UART0	Ericsson F3507g Mobile Broadband Minicard Modem
+UART1	Ericsson F3507g Mobile Broadband Minicard Data Modem
+UART2	Ericsson F3507g Mobile Broadband Minicard GPS Port
+
 AT*: List all supported AT commands (described in Sony AT commands document)
 ATA: Answer incoming call command (described in Sony AT commands document)
 AT+BRSF: Bluetootth retrieve supported (described in Sony AT commands document)
@@ -178,3 +182,17 @@ AT*E2CHAN: Returns UMTS channel information.
 	*E2CHAN: (0-1),(0-1)
 
 	OK
+
+# 20200315
+Display all Commands	at*
+Display Manufacturer	at+gmi
+Display Model			at+gmm
+Display Revision		at+gmr
+Display IMEI			at+cgsn
+Show Command Option ex.	at+cpin=?
+Read Command Option ex.	at+cpin?
+power-off card			at+cfun=0		# card won't respond to any before hard reset or phy switch toggle
+GPRS + UMTS Radio on	at+cfun=1
+GPRS + UMTS Radio off	at+cfun=4		power saving mode
+GPRS (UMTS Radio off)	at+cfun=5
+UMTS (GPRS Radio off)	at+cfun=6

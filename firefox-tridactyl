@@ -1,0 +1,9 @@
+# 200510
+
+# enable dot file (.tridactylrc) with native messages
+:installnative
+
+# edit ~/.tridactylrc
+
+# patches for custom Firefox build (to enable Ctrl-W to be redefined)
+https://github.com/glacambre/firefox-patches/blob/master/dont_reserve_keys.patch

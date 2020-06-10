@@ -1,0 +1,7 @@
+# 190915
+# DNS over TLS:
+https://marc.info/?l=openbsd-ports&m=156801740418343&w=2
+# change it to OpenBSD way:
+about:config
+network.trr.mode
+0 -> 5

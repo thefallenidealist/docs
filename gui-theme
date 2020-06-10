@@ -1,4 +1,12 @@
 # 191207
+# ------------------------------------------------------------------------------
+# themes
+# ------------------------------------------------------------------------------
+# GTK2 files:
+~/.gtkrc-2.0
+# GTK3 files:
+$HOME/.config/gtk-3.0/settings.ini
+
 # GTK2
 - download Divinorum theme
 - extract it to ~/.themes
@@ -8,17 +16,24 @@
 	include "/home/johnny/.themes/Divinorum-Blue/gtk-2.0/gtkrc"
 	include "/home/johnny/.gtkrc.mine"
 
-
 # GTK3
 - Download theme:
 - Extract it to ~/.themes
 - run it:
+# needs gtk 3.12
 GTK_THEME=Adwaita:dark galculator
 GTK_THEME=Mojave-dark galculator
+# GTK3 dark theme 200426
+# in settings.ini put this and restart application:
+gtk-application-prefer-dark-theme = true
+
 
 # QT
 
-# KiCAD colors
+
+# ------------------------------------------------------------------------------
+# keyboard shortcuts
+# ------------------------------------------------------------------------------
 
 # GTK2 Emacs shortcuts
 ~/.gtkrc.mine
@@ -36,3 +51,12 @@ GTK_THEME=Mojave-dark galculator
 	[Settings]
 	gtk-key-theme-name = Emacs
 
+# ------------------------------------------------------------------------------
+# other
+# ------------------------------------------------------------------------------
+# PcmanFM per folder settings:
+View -> Preserve this folder settings
+# config should be kept in (should, not applicable in my case):
+~/.config/pcmanfm/<profile>/dir-settings.conf
+
+# KiCAD colors

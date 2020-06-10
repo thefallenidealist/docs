@@ -42,16 +42,16 @@ Disable-Force-Encryption-Treble.zip
 # reboot to fastboot/recovery												{{{
 # -----------------------------------------------------------------------------
 # Hardware way: poweroff phone
-	- volume down & power -> fastboot
-		- volume up   & power -> recovery (TWRP if installed)
+- volume down & power -> fastboot
+- volume up   & power -> recovery (TWRP if installed)
 
 # PC:
-		adb reboot recovery/bootloader
-		fastboot reboot # and hold volume up/down
+adb reboot recovery/bootloader
+fastboot reboot # and hold volume up/down
 
 # tips
-		- enough to push volume up/down button when reseting or connecting USB cable on powered off device
-		- sometimes it won't catch first attempt in fastboot (even if it is booted into fastboot mode)
+- enough to push volume up/down button when reseting or connecting USB cable on powered off device
+- sometimes it won't catch first attempt in fastboot (even if it is booted into fastboot mode)
 # ------------------------------------------------------------------------- }}}
 #
 # enable developers options & USB debugging									{{{
@@ -154,11 +154,6 @@ python2.7 ./splash_gen.py
 fastboot flash splash splash.img
 # ------------------------------------------------------------------------- }}}
 
-
-# backup & restore															{{{
-# -----------------------------------------------------------------------------
-# ------------------------------------------------------------------------- }}}
-
 # Lineage fix after Factory reset											{{{
 # -----------------------------------------------------------------------------
 doas fastboot flash system_a system.img && doas fastboot flash system_b system.img
@@ -195,7 +190,3 @@ doas fastboot flash aboot_b aboot_9.6.4.img
 
 # change slots:
 doas fastboot set_active b
-
-#																			{{{
-# -----------------------------------------------------------------------------
-# ------------------------------------------------------------------------- }}}

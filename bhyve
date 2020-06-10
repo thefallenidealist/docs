@@ -96,7 +96,9 @@ vm -f install obsd install64.iso
 - console: com0, 115200
 - MBR: works
 - GPT: won't boot with legacy BIOS
+# custom partitioning TODO
 - pkg: Set -game64.tgz -xbase64.tgz -xshare64.tgz -xfont64.tgz -xserv64.tgz
+- pkg: Set -game66.tgz -xbase66.tgz -xshare66.tgz -xfont66.tgz -xserv66.tgz
 - timezone: CET
 
 # boot it without CD:
@@ -158,6 +160,74 @@ vm create -t windows win10
 vm install win10 win10-clean-uefi.iso
 vncviewer 0.0.0.0:5900
 # ------------------------------------------------------------------------- }}}
+# quest - Windows 10 2020													{{{
+# -----------------------------------------------------------------------------
+- .iso should have any spaces in filename
+vm create -t windows win10
+
+# edit conf:
+graphics_res="1600x900"
+# VirtIO HDD:
+disk0_type="virtio-blk"
+disk0_name="/dev/zvol/backup/vm2/disk-win10"
+disk0_dev="custom"
+# AHCI CD with VirtIO drivers
+disk1_type="ahci-cd"
+disk1_dev="custom"
+disk1_name="/mnt/vm/.iso/virtio-win-0.1.171.iso"
+
+vm install win10 .iso/Windows_10.iso
+# when Windows doesn't recognize HDD:
+# - click "Load driver" and load it from CD
+# viostor/w10/amd64 (it won't find it automatically if whole CD is searched)
+
+vncviewer 0.0.0.0:5900
+# windows errors															{{{
+# -----------------------------------------------------------------------------
+OOBEKEYBOARD/OOBEMULTIPAGE errors:
+
+# attemp 1:
+%windir%\System32\Sysprep\sysprep.exe /oobe /reboot
+
+# attemp 2:
+net user administrator /active:yes
+net user /add owner mypassword
+net localgroup administrators owner /add
+cd %windir%\system32\oobe
+msoobe.exe
+# ------------------------------------------------------------------------- }}}
+
+# after installation:
+# VirtIO
+# 1) add VirtIO NIC or HDD
+disk1_type="virtio-blk"
+disk1_name="/dev/zvol/backup/vm2/disk-win10"
+disk1_dev="custom"
+
+# 2) boot with attached CD with drivers:
+vm install win10 virtio-installer.iso
+# or add to win10.conf:
+disk1_type="ahci-cd"
+disk1_dev="custom"
+disk1_name="/mnt/vm/.iso/virtio-win-0.1.171.iso"
+
+# after installation2:
+# - enable RDP
+# - update display driver to VirtIO
+
+# TODO:
+# very slow IO:
+https://forums.freebsd.org/threads/bhyve-windows-server-slow-io.71199/#post-456220
+
+# remote desktop
+pkg install freerdp
+
+# slowiness
+# - NVMe?
+# - single CPU?
+# - patches?
+# -- TPR shadowing disable for non-Xeon CPUs
+# ------------------------------------------------------------------------- }}}
 # guest - DragonFly BSD														{{{
 # -----------------------------------------------------------------------------
 vm create -t dragonfly dfbsd
@@ -177,7 +247,23 @@ to
 	grub_run_dir="/grub"
 # ------------------------------------------------------------------------- }}}
 
+# guest - Ubuntu															{{{
+# -----------------------------------------------------------------------------
+# 200426
+vm create -t ubuntu ubuntu
+vm install -f ubuntu ubuntu-20.04-live-server-amd64.iso
+# ------------------------------------------------------------------------- }}}
 
+# guest on ZFS vdev															{{{
+# -----------------------------------------------------------------------------
+# 200514
+zfs create -sV 50G -o volmode=dev backup/vm2/disk-win10
+
+vm.conf:
+	disk0_name="/dev/zvol/backup/vm2/disk-win10"
+	disk0_type="virtio-blk"
+	disk0_dev="custom"
+# ------------------------------------------------------------------------- }}}
 # dhcpd																		{{{
 # -----------------------------------------------------------------------------
 # 190120 FreeBSD host + OpenBSD's dhcpd
@@ -254,6 +340,47 @@ vm start -f debian
 # XXX
 - not even one extern or internal (mSATA) connetor seems to be connected to 0/20/0
 #-------------------------------------------------------------------------- }}}
+# PCI passthru 2nd attempt													{{{
+# -----------------------------------------------------------------------------
+# 200608
+pciconf -l | egrep 'ehci|xhci'
+# no need for rebooting and editing /boot/loader.conf with pptdevs="0/20/0 0/26/0 0/29/0"
+# - same results with and without xhci in kernel
+# - same results with devctl and pptdevs in loader.conf
+devctl detach pci0:20:0 ; devctl set driver pci0:20:0 ppt
+devctl detach pci0:26:0 ; devctl set driver pci0:26:0 ppt
+devctl detach pci0:29:0 ; devctl set driver pci0:29:0 ppt
+
+- 0/20/0 is left USB on T430s - USB devices (and controller) will be recognized but USB stick won't work
+
+# with https://reviews.freebsd.org/rS349184 applied
+- FreeBSD and Debian:
+	passthru0="0/20/0"
+	# start vm -> host crash
+	vtd_add_device: device 0 is not in scope for any DMA remapping unit
+	- caused by vmm.ko patch (not in 12.1-RELEASE)
+	- commenting panic() line in vtd.c will still result in crash (reason: page fault)
+	- reverting patch causes FreeBSD and Debian to boot
+
+# without https://reviews.freebsd.org/rS349184 applied
+- FreeBSD boots, connecting USB:
+	xhci0: Resetting controller
+	usb_alloc_device: device init 2 failed (USB_ERR_TIMEOUT, ignored)
+	ugen0.2: <Unknown > at usbus0 (disconnected)
+	uhub_reattach_port: could not allocate new device
+	uhub0: at usbus0, port 1, addr 1 (disconnected)
+	xhci0: Port routing mask set to 0xffffffff
+	uhub0: <0x8086 XHCI root HUB, class 9/0, rev 3.00/1.00, addr 1> on usbus0
+	uhub0: 8 ports with 8 removable, self powered
+- later, FreeBSD and Debian:
+  - won't boot
+  # - no differences between when it worked and ain't (same patch enabled/disabled)
+  - difference: GENERIC kernel vs mine
+
+
+# FreeBSD 13.0-CURRENT (June 4th 2020):
+- same kernel panic as patched 12.1-RELEASE
+# ------------------------------------------------------------------------- }}}
 # sound																		{{{
 #------------------------------------------------------------------------------
 # 200315
@@ -275,3 +402,23 @@ After running FreeBSD 12.1 bootonly CD it works:
 - there is /dev/dsp
 - cat /bin/sh > /dev/dsp
 #-------------------------------------------------------------------------- }}}
+
+# errors 											{{{
+# -----------------------------------------------------------------------------
+# 2020.04
+# bhyve exited with status 1
+- trying to install Windows 10
+- Windows 10.iso has spaces in filename
+-> change spaces with something else and it will work
+
+# 2020.06
+vm debian - works in GRUB, later: Abort trap
+vm-bhyve.log: bhyve exited with status 134
+caused by option:
+bhyve_options="-s 6,hda,play=/dev/dsp,rec=/dev/dsp"
+- sound is over DP monitor
+hw.snd.default_unit: 3
+# Fix:
+# - remove:
+bhyve_options="-s 6,hda,play=/dev/dsp,rec=/dev/dsp"
+# ------------------------------------------------------------------------- }}}

@@ -1,0 +1,16 @@
+# 191103
+
+# recall last argument with !$
+% mkdir /tmp/folderA /tmp/folderB
+% cd !$
+cd /tmp/folderB
+% pwd
+/tmp/folderB
+
+# edit previous command in $EDITOR
+% ls /tmp
+% fc
+
+# sort by size, human readable
+du -sh | sort -h
+zfs list | sort -h -k 2

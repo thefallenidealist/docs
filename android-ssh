@@ -1,0 +1,105 @@
+# 200408
+Objective: ssh to Android to make backups
+
+# SimpleSSHD																{{{
+# -----------------------------------------------------------------------------
+F-droid: install SimpleSSHD
+
+# client:
+ssh -p 2222 <IP>
+password: read what SimpleSSHD wrote on phone
+su
+
+works:
+- limited environment
+- has rsync
+# ------------------------------------------------------------------------- }}}
+
+# termux																	{{{
+# -----------------------------------------------------------------------------
+- install termux: F-droid
+- run termux
+
+# as user (default, won't work as root)
+pkg install root-repo openssh tsu
+sshd
+passwd	# number was 22
+su
+passwd	# number was 22
+# /data/data/com.termux/files/usr/bin/passwd
+
+# debugging:
+sshd -D
+
+# client:
+ssh root@<IP> -p 8022
+su
+# ------------------------------------------------------------------------- }}}
+
+# playing with termux														{{{
+# -----------------------------------------------------------------------------
+# all command bellow as user, not root
+htop
+pkg install x11-repo
+pkg install zsh neovim tmux
+
+pkg install xterm
+# ------------------------------------------------------------------------- }}}
+
+# copying files																{{{
+# -----------------------------------------------------------------------------
+# copy ssh key from PC to Android:
+ssh-keygen -t ed25519 -a 100 -f ~/.ssh/key-mobitel
+ssh-copy-id -p 8022 -i .ssh/key-mobitel root@mobitel
+
+# try login with key
+ssh -p 8022 -i ~/.ssh/key-mobitel root@mobitel
+-> permission denied for /storage/*, needs root (even when logged in as root@mobitel)
+
+# on Android phone:
+termux
+tsu -a
+# passwd	# std + 33
+vim /data/data/com.termux/files/usr/etc/ssh/sshd_config
+# add line:
+StrictModes no
+# exit vim, start ssh in debug mode:
+sshd -D -dd
+
+# try ssh
+ssh -p 8022 -i ~/.ssh/key-mobitel root@mobitel
+
+		# # su
+		# tsu -a
+		# 	# ssh-keygen -t ed25519 -a 100 -f .key-mobitel-to-laptop-root
+		# 	# key stored at:
+		# 	# /data/data/com.termux/files/home/
+
+# if everything above works, try to copy something to SD card
+# on phone, start sshd without debug mode:
+sshd
+
+scp -i ~/.ssh/key-mobitel -P 8022 /bin/ls root@mobitel:/storage/<some numbers>
+
+# make it easier:
+# on PC, edit ~/.ssh/config and add:
+Host mobitel
+	User root
+	Port 8022
+	IdentityFile ~/.ssh/key-mobitel
+
+# then, to copy something:
+scp /bin/ls root@mobitel:/storage/<some numbers>
+# ------------------------------------------------------------------------- }}}
+
+# termux, tl;dr: later, when init was done, just to connect
+termux
+tsu -a
+sshd
+
+# PATHs
+# -----------------------------------------------------------------------------
+# internal storage:
+/sdcard
+# external SD
+# TODO

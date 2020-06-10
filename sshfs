@@ -1,0 +1,18 @@
+# Created 181222
+
+pkg install fusefs-sshfs
+sysctl vfs.usermount=1
+# otherwise error:
+# mount_fusefs: /dev/fuse on /usr/home/johnny/ssh-t420: Operation not permitted
+# fuse: failed to mount file system: No error: 0
+
+
+sshfs laptop:/home/johnny ./ssh-t420
+fuse: failed to open fuse device: Permission denied
+# fix, add user to operator group
+pw usermod johnny -g operator
+# relogin
+
+
+
+sshfs -o follow_symlinks user@server:/dir/ .

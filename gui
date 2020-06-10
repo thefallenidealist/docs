@@ -1,5 +1,5 @@
 #  vim: set ft=conf ts=4 sw=4 tw=0 fdm=marker noet :
-# Set default programs														{{{
+# Set default programs/open with											{{{
 # -----------------------------------------------------------------------------
 # default .desktop files are in:
 /usr/local/share/applications/
@@ -76,7 +76,6 @@ Xft.dpi: 130
 xrandr --dpi 140 && xrdb -merge $HOME/.Xresources
 # ------------------------------------------------------------------------- }}}
 
-
 # xrandr video outputs														{{{
 # -----------------------------------------------------------------------------
 # 20170101
@@ -92,6 +91,17 @@ xrandr --output LVDS1 --output HDMI1
 xrandr --auto
 # ------------------------------------------------------------------------- }}}
 
+# run X11 application as root												{{{
+# -----------------------------------------------------------------------------
+# 200502
+Tested on Debian 10 under byhve (x11 forwarding work for user)
+
+xauth list | grep unix`echo $DISPLAY | cut -c10-12` > /tmp/xauth # TODO only last line
+su
+xauth add debian/unix:10 MIT-MAGIC-COOKIE-1 ce24ef8b78dc6d55ede33db601ae210d
+xauth add `cat /tmp/xauth`
+XXX
+# ------------------------------------------------------------------------- }}}
 
 
 
@@ -132,11 +142,6 @@ sct 2000
 sct 8000
 # back to default:
 sct
-# ------------------------------------------------------------------------- }}}
-
-
-#						{{{
-# -----------------------------------------------------------------------------
 # ------------------------------------------------------------------------- }}}
 
 

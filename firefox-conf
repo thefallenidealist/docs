@@ -1,0 +1,22 @@
+# 191103
+Disable Pocket
+extensions.pocket.enabled	false
+
+DPI
+UI only
+use system dpi, not default 96:
+layout.css.dpi: 0
+
+Remove full screen warning
+full-screen-api.warning.timeout:	0
+
+Enable OpenGL Off-Main-Thread Compositing (OMTC)
+check:
+about:support -> Graphics: Basic or Compositing
+you can force-enable it by going to about:config and enabling layers.acceleration.force-enabled
+
+
+
+# userChrome import file:
+~/.mozilla/firefox/<profile_dir>/chrome/userChrome.css
+@import url("./imports/some_file.css");

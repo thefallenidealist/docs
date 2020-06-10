@@ -1,4 +1,4 @@
-# RISC-V MCU 
+# RISC-V MCU
 
 TL;DR: Not worh it (shipping cost, shipping time, got one debugger broken), I will never buy anything from SeedStudio.
 
@@ -9,7 +9,7 @@ I have ordered 4 boards and 2 JTAGs and in the end cost was: $34 for hardware (4
 
 
 ## Board review
-https://www.seeedstudio.com/Sipeed-Longan-Nano-RISC-V-GD32VF103CBT6-Development-Board-p-4205.html
+[Sipeed Longan Nano](https://www.seeedstudio.com/Sipeed-Longan-Nano-RISC-V-GD32VF103CBT6-Development-Board-p-4205.html)  
 Be very aware of shipping prices! Board is not as cheap as it sounds, not even close!
 DHL is eeeexpensive and slow (at least in my country) - after 3 days it was in my country, but I got board 13 days after that - DHL express indeed!
 DHL will respond very slowly to mails (and won't answer all the questions) or none at all (I have contacted 3 persons).
@@ -32,7 +32,7 @@ If you can ignore all DHL situation, all lost nerves money and days in shipping,
 Or just buy it from eBay/AliExpress not from SeedStudio - it will be much cheaper in the end despite at first hand looks don't look that.
 
 ## JTAG debugger review
-https://www.seeedstudio.com/Sipeed-USB-JTAG-TTL-RISC-V-Debugger-p-2910.html
+[Sipeed USB JTAG](https://www.seeedstudio.com/Sipeed-USB-JTAG-TTL-RISC-V-Debugger-p-2910.html)  
 TL;DR: Bought 2, only one works as JTAG, other not. Both have working UART part.
 
 You need first to debug debugger (if it is working) then you can (maybe) debug board.
@@ -50,7 +50,7 @@ No LEDs to be found - it would be nice to have 2 colored LEDs for debugger (some
 Debugger has 2x5 connector for connecting something like old AVR programmer cables, but they don't give you cable with connector. But they at least give you some dupoint cables.
 
 Bought it because it:
-- So I can easy debug my RISC-V board without fiddling with debugger
+- So I can easy debug my RISC-V board without fiddling with debugger HW or firmware
 - wasn't expensive compared to other FTDI boards (well, it was, because you will pay monstrous shipping)
 - has a housing
 - looked as neat way to connect to board

@@ -1,0 +1,212 @@
+# 190503
+
+# iocage																	{{{
+# -----------------------------------------------------------------------------
+# 200607
+iocell - no python dependencies, but last github commit from 2018, requires ZFS
+- called abandoware..., install iocage with all py37* dependencies
+
+pkg install py37-iocage
+
+iocage activate <pool>
+iocage fetch
+
+# list downloaded releases
+iocage list -r
+
+iocage create --name test1 ip4_addr="lo0|192.168.5.2" -r 12.1-RELEASE
+
+# what jails will be started at boot:
+iocage get -r boot
+# set it to start automatically
+iocage set boot=on <jail name>
+
+iocage start test1
+iocage console test1
+
+# enable ping and network from jail
+iocage set allow_raw_sockets=1 test1
+iocage set resolver="nameserver 1.1.1.1" test1
+iocage set ip4_addr="lo0|192.168.5.2" test1
+# ------------------------------------------------------------------------- }}}
+# networking conflict between bhyve and jails								{{{
+# -----------------------------------------------------------------------------
+It wasn't possible to use both bhyve and jails together - eg: bhyve is working as expcted, starting jail will break network connection for bhyve
+- bhyve: 192.168.4.x
+- jails: 192.168.5.x
+
+fix:
+- IP address should be on lo0 (or lo1) - default was on wlan0 (when set with iocage set ip4_addr="192.168.5.2" test1), should be:
+- iocage set ip4_addr="lo0|192.168.5.2" test
+- pf.conf:
+  - use only one rule for matching something which does NAT on wlan0
+	vm_net   = "192.168.4.0/24"
+	-nat log on {$ext_if}	from {$jail_net}			to any -> ($ext_if)
+	-nat log on {$ext_if}	from {$vm_net}				to any -> ($ext_if)
+	+nat log on {$ext_if}	from {$jail_net, $vm_net}	to any -> ($ext_if)
+# ------------------------------------------------------------------------- }}}
+# manual																	{{{
+# -----------------------------------------------------------------------------
+# 200607
+zfs create innovator/jails/base12.1
+tar xvf base.txz -C /usr/jails/base12.1
+tar xvf lib32.txz -C /usr/jails/base12.1
+cp /etc/localtime /usr/jails/base12.1
+
+freebsd-update -b /usr/jails/base12.1 fetch install
+
+# create new jail:
+zfs snapshot innovator/jails/base12.1@p5
+zfs clone innovator/jails/base12.1@p5 innovator/jails/manual
+
+# TODO
+# ------------------------------------------------------------------------- }}}
+# ARM jail																	{{{
+# -----------------------------------------------------------------------------
+# 200607
+# copy prebuilt armv7 -RELEASE to jail folder:
+rsync /mnt/vm/qemu/arm/FreeBSD-12.1-RELEASE-arm-armv7-GENERICSD/ /usr/jails/arm/
+cd /usr/jails/arm/
+
+# save 1.5 GB of space
+rm -rf boot/ rescue/
+rm -rf usr/lib/debug
+rm -rf usr/tests
+
+mkdir -p /usr/jails/arm/usr/local/bin
+cp /usr/local/bin/qemu-arm-static /usr/jails/arm/usr/local/bin
+
+# start jail
+jail -c persist name=arm path=/usr/jails/arm mount.devfs host.hostname=arm.jail command=sh /etc/rc
+# start jail - network edition:
+sysctl security.jail.allow_raw_sockets=1
+jail -c persist name=arm path=/usr/jails/arm mount.devfs host.hostname=arm.jail allow.raw_sockets ip4.addr="lo0|192.168.5.13" command=sh /etc/rc
+# "login" to jail
+jexec arm sh
+
+# network:
+doesn't work:
+	ping 1.1.1.1
+	Unsupported setsockopt level=65535 optname=4119
+	ping: setsockopt SO_TS_CLOCK: Protocol not available
+	ping 127.0.0.1
+	Unsupported setsockopt level=65535 optname=4119
+	ping: setsockopt SO_TS_CLOCK: Protocol not available
+
+
+# references
+https://forums.freebsd.org/threads/arm-or-sparc-in-freebsd-jail-on-amd64-host.65130/#post-381430
+# ------------------------------------------------------------------------- }}}
+# Linux jail																{{{
+# -----------------------------------------------------------------------------
+# 190913
+# https://forums.freebsd.org/threads/setting-up-a-debian-linux-jail-on-freebsd.68434/
+linux_enable="YES" # in rc.conf
+kldload linux64
+zfs create innovator/jails/linux
+pkg install -y debootstrap
+
+debootstrap --foreign --arch=amd64 stable /usr/jails/linux http://deb.devuan.org/merged/
+# TODO:  --exclude=devd,dmidecode,isc-dhcp-client,isc-dhcp-common,kldutils,pf,vidcontrol
+rm /usr/jails/linux/var/cache/apt/archives/sysvinit*	# otherwise dpkg will configuring "sysvrc" and restart the host!
+rm /usr/jails/linux/var/cache/apt/archives/rsyslog*
+
+mount -t linprocfs none /usr/jails/linux/proc
+mount -t linsysfs  none /usr/jails/linux/sys
+mount -t tmpfs     none /usr/jails/linux/tmp
+
+fetch https://devuan.org/os/keyring/repository@devuan.org.asc -o /usr/jails/linux/root
+# XXX 200608: 404
+
+chroot /usr/jails/linux /bin/bash
+# -----------------------------------------------------------------------------
+dpkg --force-depends -i /var/cache/apt/archives/*.deb
+dpkg --force-depends -i /var/cache/apt/archives/*.deb
+# dpkg --force-depends -Ei /var/cache/apt/archives/*.deb
+# dpkg --force-all -i /var/cache/apt/archives/base-files_9.9+devuan2.5_all.deb
+dpkg --configure --pending
+
+cat /usr/jails/linux/etc/passwd | sed -r 's/(:[x|*]:)([0-9]+:[0-9]+:)/:*:\2:0:0:/g' > /usr/jails/linux/etc/master.passwd
+pwd_mkdb -p -d /usr/jails/linux/etc /usr/jails/linux/etc/master.passwd
+
+service jail start linux
+dpkg-reconfigure tzdata
+
+apt install -f
+apt install -f
+
+apt install devuan-keyring
+apt update
+# ------------------------------------------------------------------------- }}}
+# resource limits															{{{
+# -----------------------------------------------------------------------------
+/boot/loader.conf
+	kern.racct.enable="1"
+- reboot
+
+# iocage:
+- not same as with rctl and manual jail - different jail names -> rctl rules won't be matched, iocage command should be used instead:
+iocage set rlimits=on test1
+iocage set pcpu="deny=50" main
+iocage set pcpu="log=50" main
+# show rules:
+rctl
+# ------------------------------------------------------------------------- }}}
+# TL;DR: again, creating new jail and using it:								{{{
+# -----------------------------------------------------------------------------
+iocage create --name test1 ip4_addr="lo0|192.168.5.2" -r 12.1-RELEASE allow_raw_sockets=1 resolver="nameserver 1.1.1.1"
+iocage start test1
+iocage set rlimits=on pcpu="deny=50" memoryuse="deny=2G" vmemoryuse="deny=2G" devfs_ruleset=5 test1
+
+iocage console test1
+
+# /etc/devfs.rules
+# Devices usually found in a desktop jail for sound support
+	[devfsrules_jail=5]
+	add include $devfsrules_hide_all
+	add include $devfsrules_unhide_basic
+	add include $devfsrules_unhide_login
+	add path zfs unhide
+	add path 'mixer*' unhide
+	add path 'dsp*' unhide
+service devfs restart
+iocage set devfs_ruleset=5 test1
+
+# on jail change:
+/etc/motd
+/etc/pkg/FreeBSD.conf
+
+# enable X11 forwarding (but network interface is localhost):
+./etc/ssh/sshd_config
+X11UseLocalhost no
+./etc/hosts - hostname for jail should be the same as in hosts's /etc/hosts
+192.168.5.2		jail-firefox1
+
+service sshd enable
+service sshd start
+
+pkg install firefox xauth
+
+pw groupadd -g 1102 -n firefox-privat && pw useradd -n firefox-privat -u 1102 -c "Firefox privatni" -g firefox-privat -d /home/firefox-privat -m -w none
+passwd firefox-privat
+
+# on host
+xhost + inet:jail-firefox1
+
+
+
+# video acceleration:
+pkg install multimedia/libva-intel-driver multimedia/libva-intel-media-driver
+pw groupmod video -m firefox-privat
+# test it:
+glxinfo
+	Error: couldn't find RGB GLX visual or fbconfig		# should not print this
+# hosts /etc/devfs.rules, to rule #5 add:
+add path 'dri*' unhide
+add path 'drm*' unhide
+add path 'dri/*' unhide
+add path 'drm/*' unhide
+
+
+# pkg install drm-fbsd12.0-kmod
+# ------------------------------------------------------------------------- }}}

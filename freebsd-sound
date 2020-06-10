@@ -1,0 +1,103 @@
+# 191027
+#  vim: set ft=conf ts=4 sw=4 tw=0 fdm=marker noet :
+# FreeBSD 12.0 ThinkPad T430s + CoreBoot
+
+# sound over DP																{{{
+# -----------------------------------------------------------------------------
+# 191027
+# find what DP/HDMI is connected:
+xrandr | \grep -w connected
+	HDMI-1 connected
+
+cat /dev/sndstat
+	Installed devices:
+	pcm0: <Realtek ALC269 (Analog 2.0+HP/2.0)> (play/rec)
+	pcm1: <Intel Panther Point (HDMI/DP 8ch)> (play)
+	pcm2: <Intel Panther Point (HDMI/DP 8ch)> (play)
+	pcm3: <Intel Panther Point (HDMI/DP 8ch)> (play) default
+
+-> HDMI-1 is pcm1 (first of HDMI/DP in list) - use 1 as default unit for sound over HDMI/DP:
+sysctl hw.snd.default_unit=1
+# it cannot be changed on the fly, restart playback/wait for next youtube song and then audio will switch over to DisplayPort link
+
+mixer
+Mixer vol      is currently set to  40:40
+Mixer pcm      is currently set to  40:40
+# use pcm, changing vol doesn't have effect
+
+# tested on ThinkPad T430s + CoreBoot + dock with DP->DP cable in dock and speakers connected into monitor (Dell U2419H)
+# ------------------------------------------------------------------------- }}}
+# switching DSP on the fly													{{{
+# -----------------------------------------------------------------------------
+sysctl hw.snd.default_unit
+# and then restart music playback (application will use old device/file descriptor)
+
+# If you really want to, you can ask virtual_oss for a loopback device:
+virtual_oss -Q 0 -C 2 -c 2 -r 48000 -b 16 -s 1024 -P /dev/null -R /dev/null -w vdsp.wav -l dsp
+# And then replay the captured sound at whatever device necessary. Something like that:
+% env AUDIODEV=/dev/dsp1 sox /dev/vdsp.wav -d --buffer 192
+# Feels quite a bit off, though: seems to mess up Audacious, possibly other issues.
+# ------------------------------------------------------------------------- }}}
+
+
+# 																{{{
+# -----------------------------------------------------------------------------
+# ------------------------------------------------------------------------- }}}
+
+# find which applications use audio:
+fstat | grep dsp
+
+
+
+# sound over the dock														{{{
+# -----------------------------------------------------------------------------
+# 191102
+# enable verbose boot:
+boot -v in loader prompt
+
+# boot without dock
+
+dmesg | grep pcm
+cat /dev/sndstat
+
+# dump HW pins:
+sysctl dev.hdac.0.pindump=1
+# dmesg output:
+hdaa0: Dumping AFG pins:
+hdaa0: nid   0x    as seq device       conn  jack    loc        color   misc
+hdaa0: 18 90a60140 4  0  Mic           Fixed Digital Internal   Unknown 1 DISA
+hdaa0:     Caps: IN
+hdaa0: 20 90170110 1  0  Speaker       Fixed Analog  Internal   Unknown 1
+hdaa0:     Caps:    OUT    EAPD      Sense: 0x00000000 (disconnected)
+hdaa0: 21 0321101f 1  15 Headphones    Jack  1/8     Left       Black   0
+hdaa0:     Caps:    OUT HP EAPD      Sense: 0x80000000 (connected)
+hdaa0: 23 411111f0 15 0  Speaker       None  1/8     Rear       Black   1 DISA
+hdaa0:     Caps:    OUT
+hdaa0: 24 03a11830 3  0  Mic           Jack  1/8     Left       Black   8
+hdaa0:     Caps: IN OUT         VREF Sense: 0x00000000 (disconnected)
+hdaa0: 25 411111f0 15 0  Speaker       None  1/8     Rear       Black   1 DISA
+hdaa0:     Caps: IN OUT         VREF Sense: 0x00000000 (disconnected)
+hdaa0: 26 01111140 4  0  Speaker       Jack  1/8     Rear       Black   1 DISA
+hdaa0:     Caps: IN OUT HP      VREF Sense: 0x00000000 (disconnected)
+hdaa0: 27 411111f0 15 0  Speaker       None  1/8     Rear       Black   1 DISA
+hdaa0:     Caps: IN OUT         VREF Sense: 0x00000000 (disconnected)
+hdaa0: 30 411111f0 15 0  Speaker       None  1/8     Rear       Black   1 DISA
+hdaa0:     Caps:    OUT              Sense: 0x00000000 (disconnected)
+hdaa0: NumGPIO=2 NumGPO=0 NumGPI=0 GPIWake=0 GPIUnsol=1
+hdaa0:  GPIO0: disabled
+hdaa0:  GPIO1: disabled
+hdaa1: Dumping AFG pins:
+hdaa1: nid   0x    as seq device       conn  jack    loc        color   misc
+hdaa1:  5 18560010 1  0  Digital-out   Jack  Digital 0x18       Unknown 0
+hdaa1:     Caps:    OUT              Sense: 0x00000000 (disconnected)
+hdaa1:  6 18560020 2  0  Digital-out   Jack  Digital 0x18       Unknown 0
+hdaa1:     Caps:    OUT              Sense: 0x00000000 (disconnected)
+hdaa1:  7 18560030 3  0  Digital-out   Jack  Digital 0x18       Unknown 0
+hdaa1:     Caps:    OUT              Sense: 0xc0000000 (connected, ELD valid)
+hdaa1: NumGPIO=0 NumGPO=0 NumGPI=0 GPIWake=0 GPIUnsol=0
+
+
+# another command for more verbose output
+sysctl hw.snd.verbose=2
+cat /dev/sndstat
+# ------------------------------------------------------------------------- }}}

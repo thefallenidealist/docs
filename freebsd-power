@@ -1,0 +1,9 @@
+# 200610
+# based on https://vermaden.wordpress.com/2018/11/28/the-power-to-serve-freebsd-power-management/
+pkg install powermon
+kldload cpuctl
+powermon
+
+
+pkg install dtrace-toolkit
+/usr/local/share/dtrace-toolkit/execsnoop

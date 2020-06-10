@@ -1,0 +1,5 @@
+# 200510
+making bootable USB stick (.iso downloaded from Microsoft.com)
+- dd method won't work
+- this one worked (under Linux):
+https://github.com/slacka/WoeUSB

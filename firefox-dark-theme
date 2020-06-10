@@ -1,0 +1,9 @@
+# 200509
+https://dataswamp.org/~solene/2020-05-04-firefox-dark.html
+about:conif
+# create new "number" key:
+ui.systemUsesDarkTheme
+# set it to 1
+# check that
+privacy.resistFingerprinting
+# is set to false

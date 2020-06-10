@@ -7,7 +7,7 @@ ThinkPad x220t
 NAS server
 
 # install
-- BIOS settings:  
+- BIOS settings: Config -> Power On with AC Attach
 - boot and install minimal OS (without encryption so it can boot automatically)
 - add user, enable sshd
 - gpart set -a lenovofix ada0
@@ -57,6 +57,16 @@ Host diskaros
 	PasswordAuthentication yes
 	PermitRootLogin without-password
 service sshd restart
+
+# enable non-root user to login as root, secure key by moving it from /root/
+# as root:
+mv /root/.ssh/key-diskaros-root* /home/johnny/.ssh
+chown johnny:johnny /home/johnny/.ssh/key-diskaros-root*
+ln -s /home/johnny/.ssh/key-diskaros-root .ssh
+ln -s /home/johnny/.ssh/key-diskaros-root.pub .ssh
+
+# try it as user on client:
+ssh -i ~/.ssh/key-diskaros-root root@diskaros
 # ------------------------------------------------------------------------- }}}
 
 # server configuration
@@ -64,3 +74,15 @@ rm /etc/motd
 zfs create -o mountpoint=/usr/ports diskaros/port
 zfs create -o mountpoint=/var/cache/pkg diskaros/pkg_cache
 pkg install zsh tmux neovim git rsync
+chsh -s /usr/local/bin/zsh toor
+
+pkg install htop exa grc smartmontools dmidecode
+
+# create 10G crypted file
+zfs create -o mountpoint=/mnt/local diskaros/local
+chown -R johnny:johnny /mnt/local
+dd if=/dev/zero of=data.bin bs=1m count=10k
+mdconfig -u 20 -at vnode -f /mnt/local/data.bin
+geli init -s 4096 -e AES-XTS -l 256 /dev/md20
+geli attach /dev/md20.eli
+zpool create -O atime=off -O setuid=off -O mountpoint=/mnt/local/data data /dev/md20.eli

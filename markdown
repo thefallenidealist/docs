@@ -12,3 +12,21 @@ grip-2.7 README.md
 
 # View it in brower:
 http://localhost:6419
+
+# 200113
+line break - two spaces at the end of line  
+**bold text**
+*italic text* _italic text_
+__underline__
+
+`code block`
+```
+multiline
+code
+block
+(must have newlines after triple ticks)
+```
+
+[//]: This is a comment
+[//]: ---------------------------------------------------------------------- {{{
+[//]: ---------------------------------------------------------------------- }}}

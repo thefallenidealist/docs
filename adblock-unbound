@@ -1,19 +1,51 @@
 # 191121
+# 200224 on ARM board
 FreeBSD 12.0-RELEASE
+FreeBSD 13.0-CURRENT
 unbound 1.9.4
+unbound 1.10
 
 service unbound enable
 
+Use 0.0.0.0 instead of 127.0.0.1
+- non routable
+- empirically faster (no timeout)
+
+
+# 200225
+
+
+
 # 1) Download list(s)
 # wget https://raw.githubusercontent.com/StevenBlack/hosts/master/alternates/fakenews-gambling/hosts
+wget https://raw.githubusercontent.com/StevenBlack/hosts/master/alternates/fakenews-gambling-porn-social/hosts
+Wget https://raw.githubusercontent.com/StevenBlack/hosts/master/alternates/fakenews-gambling-social/hosts
 wget https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts
-awk 'BEGIN { OFS = "" } NF == 2 && $1 == "0.0.0.0" { print "local-zone: \"", $2, "\" static"}' hosts > /usr/local/etc/unbound/etc/adblock.conf
+awk 'BEGIN { OFS = "" } NF == 2 && $1 == "0.0.0.0" { print "local-zone: \"", $2, "\" static"}' hosts > /usr/local/etc/unbound/adblock.conf
 
 # 2) Add line to /var/unbound/etc/unbound.conf at the end of the “server:” config options
-include: /usr/local/etc/unbound/ads.conf
+/usr/local/etc/unbound/unbound.conf
+include: /usr/local/etc/unbound/adblock.conf
 
 # 3) Restart unbound
 service unbound restart
+
+# addition 1 - logging
+# -----------------------------------------------------------------------------
+# by default it is chrooted - we will continue to use that
+# changed in unbound.conf
+server:
+	...
+	chroot: "/var"
+	directory: "/var/unbound"
+	logfile: "/var/log/unbound.log"
+	log-time-ascii: yes
+	log-queries: yes
+- no need to move adblock.conf to new location, it will continue to work as is (test: try to ping forbidden host with and without started unbound)
+# XXX check this - logs are not working
+
+# make unprivileged user for updating list
+# -----------------------------------------------------------------------------
 
 
 # TODO 191124:
