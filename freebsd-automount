@@ -39,5 +39,4 @@ __log() { # @=MESSAGE
 }
 # ------------------------------------------------------------------------- }}}
 
-
 cp /usr/local/etc/automount.conf.sample /usr/local/etc/automount.conf

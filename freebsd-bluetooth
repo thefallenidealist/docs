@@ -1,0 +1,55 @@
+# 200801
+ThinkPad T430s internal bluetooth
+ugen1.4: <Broadcom Corp BCM20702A0> at usbus1, cfg=0 md=HOST spd=FULL (12Mbps) pwr=ON (0mA)
+
+# not in handbook:
+cp /etc/defaults/bluetooth.device.conf /etc/bluetooth/ubt0.conf
+
+service bluetooth start ubt0	# error, but 2nd try will succeed (or create ubt0.conf from line above)
+service bluetooth start ubt0
+
+# scan
+hccontrol -n ubt0hci inquiry
+	...
+	BD_ADDR: 00:19:10:09:24:8f
+
+# get name
+hccontrol -n ubt0hci remote_name_request 00:19:10:09:24:8f
+	BD_ADDR: 00:19:10:09:24:8f
+	Name: Naranca-UART
+
+# create connection
+hccontrol -n ubt0hci create_connection 00:19:10:09:24:8f
+# check connection
+hccontrol -n ubt0hci read_connection_list
+# disconnect
+hccontrol -n ubt0hci disconnect <Handle from command above>
+
+# pair device:
+# To /etc/bluetooth/hcsecd.conf add
+/etc/bluetooth/hcsecd.conf
+device {
+        bdaddr  00:19:10:09:23:bb;
+        name    "slave1";
+        key     nokey;
+        pin     "1234";
+}
+
+service hcsecd start
+
+# bluetooth UART
+rfcomm_sppd -a 00:19:10:09:24:8f -t
+	rfcomm_sppd 26482 - - Starting on /dev/pts/18...
+	/dev/pts/18
+cu -l /dev/pts/18 -s 115200
+# that's it!
+
+# TL;DR version:
+# -----------------------------------------------------------------------------
+# - Files already configured:
+# /etc/bluetooth/ubt0.conf
+# /etc/bluetooth/hcsecd.conf
+sysctl dev.acpi_ibm.0.bluetooth=1
+hccontrol -n ubt0hci create_connection 00:19:10:09:24:8f
+rfcomm_sppd -a 00:19:10:09:24:8f -t
+cu -l /dev/pts/$PTS -s 115200

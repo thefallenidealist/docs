@@ -1,0 +1,47 @@
+# 200802 created
+ThinkPad T430s internal bluetooth
+ugen1.4: <Broadcom Corp BCM20702A0> at usbus1, cfg=0 md=HOST spd=FULL (12Mbps) pwr=ON (0mA)
+
+# references
+https://wiki.freebsd.org/SteveWills/BTSpeaker
+
+sysctl dev.acpi_ibm.0.bluetooth=1
+service bluetooth start ubt0	# error, but 2nd try will succeed (or create ubt0.conf from line above)
+service bluetooth start ubt0
+
+hccontrol -n ubt0hci inquiry
+	BD_ADDR: 58:51:00:19:d1:9c
+
+hccontrol -n ubt0hci remote_name_request 58:51:00:19:d1:9c
+	BD_ADDR: 58:51:00:19:d1:9c
+	Name: SPEEDLINK XILU
+#
+# To /etc/bluetooth/hcsecd.conf add
+/etc/bluetooth/hcsecd.conf
+device {
+	bdaddr	00:19:10:09:23:bb;
+	name	"slave1";
+	key		nokey;
+	pin		"0000";
+}
+service hcsecd start
+
+hccontrol -n ubt0hci create_connection 58:51:00:19:d1:9c
+pkg install virtual_oss
+kldload cuse
+
+virtual_oss -C 2 -c 2 -r 48000 -b 16 -s 1024 -R /dev/null -P /dev/bluetooth/58:51:00:19:d1:9c -d dsp
+virtual_oss -C 2 -c 2 -r 44100 -b 16 -s 1024 -R /dev/null -P /dev/bluetooth/58:51:00:19:d1:9c -d dsp
+
+# that's it!
+# Start mpv or something and by default it will play on BT
+# - poor range
+# - mpv will stop when speaker looses connections
+
+# errors																	{{{
+# -----------------------------------------------------------------------------
+	backend_bt: Could not connect to HC: 54
+	backend_bt: PSM=0x19
+- change bitrate from 48000 to 44100
+- check PIN/pairing
+# ------------------------------------------------------------------------- }}}

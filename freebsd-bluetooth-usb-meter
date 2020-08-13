@@ -1,0 +1,49 @@
+# 200802 created
+ThinkPad T430s internal bluetooth
+ugen1.4: <Broadcom Corp BCM20702A0> at usbus1, cfg=0 md=HOST spd=FULL (12Mbps) pwr=ON (0mA)
+
+sysctl dev.acpi_ibm.0.bluetooth=1
+service bluetooth start ubt0	# error, but 2nd try will succeed (or create ubt0.conf from line above)
+service bluetooth start ubt0
+
+hccontrol -n ubt0hci inquiry
+	BD_ADDR: ff:ff:c9:28:27:f4
+
+hccontrol -n ubt0hci remote_name_request ff:ff:c9:28:27:f4
+	BD_ADDR: ff:ff:c9:28:27:f4
+	Name: UD18-SPP
+
+# To /etc/bluetooth/hcsecd.conf add
+/etc/bluetooth/hcsecd.conf
+device {
+	bdaddr	00:19:10:09:23:bb;
+	name	"slave1";
+	key		nokey;
+	pin		"0000";
+}
+service hcsecd start
+
+doas hccontrol -n ubt0hci create_connection ff:ff:c9:28:27:f4
+
+rfcomm_sppd -a ff:ff:c9:28:27:f4 -t
+# cu -l /dev/pts/$PTS -s 9600
+# https://github.com/rfinnie/rdserialtool
+python3 setup.py install --user
+rdserialtool -q --device=um24c --serial-device=/dev/pts/25
+
+# details about protocol:
+https://sigrok.org/wiki/RDTech_UM_series
+
+# TL;DR: usage after configuration is done
+# -----------------------------------------------------------------------------
+# scan to se if meter is in range:
+hccontrol -n ubt0hci inquiry
+	...
+	BD_ADDR: ff:ff:c9:28:27:f4
+# connect and create serial terminal:
+doas hccontrol -n ubt0hci create_connection ff:ff:c9:28:27:f4
+rfcomm_sppd -a ff:ff:c9:28:27:f4 -t
+	...
+	/dev/pts/XY
+# read data:
+rdserialtool -q --device=um24c --serial-device=/dev/pts/XY

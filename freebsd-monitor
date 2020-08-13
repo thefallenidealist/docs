@@ -3,8 +3,11 @@
 # ThinkPad T430s CoreBoot, monitors on dock or monitor on miniDP -> (DP or HDMI) adapter
 
 connecting and disconnecting DP cable on the dock doesn't generate anything:
-- on devd			(only change was ACPI event 0x81 (acpi_thermal))
+- on devd			(only change was ACPI event 0x81 (acpi_thermal) - AC connect/disconnect)
 - sysctl hw.acpi.	(only change was temperature)
 
 Linux on the same laptop (Debian 10) will recognize connecting/disconnecting
 - polling (xrandr?) status?
+
+# workaround:
+- if dock is used then devd can be used to detect various USB devices in dock (eg internal USB hub)

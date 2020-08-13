@@ -1,0 +1,19 @@
+# 200709 again
+# create distinfo
+make makesum
+
+# create pkg-plist
+make makeplist
+- check it manually
+- remove line: 'you/have/to/check/what/makeplist/gives/you'
+
+export DEVELOPER=yes
+make stage
+make stage-qa
+make package
+make install
+make deinstall
+make package # as user
+
+# problem: after editing pkg-plist make install won't apply changes
+rm work/.PLIST.mktmp
