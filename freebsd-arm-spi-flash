@@ -1,0 +1,86 @@
+# 200812 created
+# ARM Orange Pi Zero with onboard SPI flash (2 MB)
+
+- not I2C - SPI0 device
+
+- don't add mx25l_load into /boot/loader.conf! Adding that driver will be loaded, but device not found. Device will be found if driver is let to be loaded automatically later (problem because driver is loaded before aw_spi?)
+
+# add device tree overlay
+# INFO: device tree loaded by kernel already has "flash" snippet, but it is disabled (and with wrong "compatible" properties)
+		/dts-v1/;
+		/plugin/;
+
+		/ {
+			compatible = "xunlong,orangepi-zero", "allwinner,sun8i-h2-plus";
+
+			fragment@0 {
+				target = <&spi0>;
+				__overlay__ {
+					status = "okay";
+
+					flash: flash@0 {
+						compatible = "jedec,spi-nor";
+						reg = <0>;	/* Chip select 0 */
+						status = "okay";
+					};
+				};
+			};
+
+			__overrides__ {
+				flash = <&flash>,"status";
+				flash = <&flash>,"compatible";
+				flash = <&flash>,"reg";
+			};
+
+		};
+# compile it:
+dtc -I dts -O dtb -@ -o /boot/dtb/overlays/flash.dtbo /opt/dtb/flash.dts
+
+/boot/loader.conf
+# remove:
+# aw_spi_load="YES"
+# mx25l_load="YES"
+# add
+fdt_overlays="...,flash.dtbo"
+
+reboot
+
+# check that device tree "compat" string is changed to "jedec,spi-nor":
+ofwdump -p /soc/spi/flash
+Node 0x2784: flash@0
+  phandle:
+    00 00 00 66
+  status:
+    6f 6b 61 79 00
+    'okay'
+  #address-cells:
+    00 00 00 01
+  #size-cells:
+    00 00 00 01
+  compatible:
+    6a 65 64 65 63 2c 73 70 69 2d 6e 6f 72 00
+    'jedec,spi-nor'
+  ...
+
+# old value was:
+	compatible:
+		6d 78 69 63 79 2c 6d 78 32 35 6c 31 36 30 36 65 00 77 69 6e
+		62 6f 6e 64 2c 77 32 35 71 31 32 38 00
+		# no ASCII string after hex
+
+# check if driver is loaded:
+dmesg | grep -i mx25l
+mx25l0: <M25Pxx Flash Family> at cs 0 mode 0 on spibus0
+mx25l0: device type mx25l1606e, size 2048K in 32 sectors of 64K, erase size 4K
+
+# test it:
+dd if=/dev/zero of=/dev/flash/spi0
+dd: /dev/flash/spi0: Operation not permitted
+
+gpart create -s gpt /dev/flash/spi0
+	gpart: Input/output error
+gpart show
+	=>  40  4016  flash/spi0  GPT  (2.0M)
+		40  4016              - free -  (2.0M)
+
+# -> doesn't work, TODO 200812: try with 13.0-CURRENT

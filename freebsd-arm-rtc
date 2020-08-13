@@ -1,0 +1,167 @@
+# 200811 created
+# DS3231 RTC module on ARM Orange Pi Zero on FreeBSD 12.1-RELEASE armv7
+
+RTC voltage: 3.3V or 5V
+address: 1101000_ ('_' is R/W bit) -> 0xD0, 0xD1 (7bit: 0x68, 0x69)
+
+# find device
+i2c -s -f /dev/iic1
+Hardware may not support START/STOP scanning; trying less-reliable read method.
+Scanning I2C devices on /dev/iic1: 56 68
+# - 0x56 - 0b1010 110_  (FRAM something... from DS3231, not needed for RTC functionality)
+# - 0x68 - DS3231
+# if connected to I2C0 bus:
+i2c -s
+Hardware may not support START/STOP scanning; trying less-reliable read method.
+Scanning I2C devices on /dev/iic0: 56 68
+
+kldload ds3231
+kldload: can't load ds3231: module already loaded or in kernel
+
+# create DeviceTree overlay
+		/dts-v1/;
+		/plugin/;
+
+		/ {
+			compatible = "xunlong,orangepi-zero", "allwinner,sun8i-h2-plus";
+
+			fragment@0 {
+				target = <&i2c0>;
+				__overlay__ {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					status = "okay";
+
+					ds3231: ds3231@68 {
+								compatible = "maxim,ds3231";
+								reg = <0x68>;
+								status = "okay";
+					};
+				};
+			};
+
+			__overrides__ {
+				ds3231 = <&ds3231>,"status";
+			};
+		};
+# INFO 200813: device must be called "ds3231", setting it to {rtc,rtc2,rtcX} results in device not present in output from "ofwdump -a"
+
+# compile it:
+# dtc -I dtc -O dtb rtc.dts > /boot/dtb/overlays/rtc.dtbo
+dtc -I dts -O dtb -@ -o /boot/dtb/overlays/ds3231.dtbo /opt/dtb/ds3231.dts
+
+# edit /boot/loader.conf and add:
+fdt_overlays="...,rtc.dtbo"
+
+reboot
+
+# check if driver is loaded:
+dmesg | grep ds3231
+ds32310: <Maxim DS3231 RTC> at addr 0xd0 on iicbus0
+ds32310: registered as a time-of-day clock, resolution 1.000000s
+
+# display values
+sysctl dev.ds3231
+dev.ds3231.0.32khz_enable: 1
+dev.ds3231.0.sqw_mode: interrupt
+dev.ds3231.0.sqw_freq: 1024
+dev.ds3231.0.bbsqw: 0
+dev.ds3231.0.temp_conv: 0
+dev.ds3231.0.temperature: 26.6C
+dev.ds3231.0.%parent: iicbus0
+dev.ds3231.0.%pnpinfo: name=ds3231@68 compat=maxim,ds3231
+dev.ds3231.0.%location: addr=0xd0
+dev.ds3231.0.%driver: ds3231
+dev.ds3231.0.%desc: Maxim DS3231 RTC
+dev.ds3231.%parent:
+
+# get temperature:
+sysctl dev.ds3231.0.temp_conv=1		# or wait for 64 seconds in worst case
+dev.ds3231.0.temp_conv: 0 -> 0
+sysctl dev.ds3231.0.temperature
+dev.ds3231.0.temperature: 27.5C
+
+# set time
+# - use ordinary date command, time will be written to i2c module
+date 2008111747
+Tue Aug 11 17:47:00 UTC 2020
+
+# test it
+wget --no-check-certificate https://raw.githubusercontent.com/vzaigrin/ds1307/master/DS1307.C -O ds1307.c
+cc ds1307.c -o ds1307
+# read time
+./ds1307 -f /dev/iic0 -a 0x68 -r
+# set date & time
+date 2008111747
+Tue Aug 11 17:47:00 UTC 2020
+./ds1307 -f /dev/iic0 -a 0x68 -r
+17:47:09 11/08/2020
+
+# summary
+- external i2c module works
+- hardware time (on i2c module) is automatically set with date command
+- doesn't work after power loss
+  - i2c module works as intented, time is correct after power loss
+  - system time is wrong - kernel uses (internal) rtc0 clock which is from SoC (without RTC battery) - 1.1.2010.
+  - disabling (internal) rtc0 results in kernel panic
+
+# problems																	{{{
+# -----------------------------------------------------------------------------
+# problem1:
+applying DTB overlay '/boot/dtb/overlays/rtc.dtbo'
+failed to apply overlay: FDT_ERR_BADPATH
+-> dts file contains 'target-path' instead of 'target'
+
+# problem2:
+clock not restored after disconnecting power
+- system clock starts from 1.1.2010.
+- RTC battery is good
+- "dts" program shows that i2c module keeps correct value
+-> disable SoC's RTC?
+   disabling SoC's RTC ends up in kernel panic & hang
+# ------------------------------------------------------------------------- }}}
+
+WIP:
+# disable internal RTC (rtc0)												{{{
+# -----------------------------------------------------------------------------
+# /boot/loader.conf
+fdt_overlays="...,rtc-internal-disable.dtbo"
+
+# device tree overlay:
+	/dts-v1/;
+	/plugin/;
+
+	/ {
+		compatible = "xunlong,orangepi-zero", "allwinner,sun8i-h2-plus";
+
+		fragment@0 {
+			target = <&rtc>;
+			__overlay__ {
+				/* status = "disabled";	// kernel panic */
+			};
+		};
+
+	};
+
+# compile it:
+dtc -I dts -O dtb -@ -o /boot/dtb/overlays/rtc-internal-disable.dtbo /opt/dtb/rtc-internal-disable.dts
+
+# reboot, kernel panic & hang:
+	...
+	ccu_h3ng0: <Allwinner H3/H5 Clock Control Unit NG> mem 0x1c20000-0x1c203ff on simplebus0
+	ccu_h3ng0: Clock apb2 have unknown parent: osc32k
+	ccu_h3ng0: Clock ahb1 have unknown parent: osc32k
+	ccu_h3ng0: Clock cpux have unknown parent: osc32k
+	panic: cannot finalize clkdom initialization
+
+	cpuid = 0
+	time = 1
+	Uptime: 1s
+	Automatic reboot in 15 seconds - press a key on the console to abort
+	Rebooting...
+	Reset: watchdog device has not been initialized
+	Reset failed!
+
+# maybe related commit from 2019.08.
+git show a89b0b978fea2c5cd53b9700158d1f984fdf1eec
+# ------------------------------------------------------------------------- }}}
